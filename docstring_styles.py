@@ -39,7 +39,7 @@ def detect_style(docstr):
     """Detect docstr style from existing docstring
 
     Parameters:
-        docstr(str): docstring whose style we want to know
+        docstr (str): docstring whose style we want to know
 
     Returns:
         class: one of [GoogleDocstring, NumpyDocstring, None]; None
@@ -53,7 +53,11 @@ def detect_style(docstr):
     return None
 
 def dedent_docstr(s):
-    """Dedent all lines except first"""
+    """Dedent all lines except first
+
+    Args:
+        s (type): Description
+    """
     lines = s.splitlines()
     if lines:
         ret = dedent("\n".join(lines[1:]))
@@ -89,12 +93,20 @@ def indent_docstr(s, indent):
 
 
 class Parameter(object):
+    """"""
     name = None
     types = None
     description = None
     meta = None
 
     def __init__(self, name, types, description, **kwargs):
+        """
+        Args:
+            name (type): Description
+            types (type): Description
+            description (type): Description
+            **kwargs (type): Description
+        """
         assert name is not None
         if description is None:
             description = ""
@@ -105,6 +117,7 @@ class Parameter(object):
 
 
 class Section(object):
+    """"""
     ALIASES = {}
     PARSERS = {}
 
@@ -125,6 +138,7 @@ class Section(object):
             heading (str): heading of the section (should be title case)
             text (str, optional): section text
             indent (str, optional): used by some formatters
+            first_indent (type): Description
         """
         self.heading = heading
         self.alias = self.resolve_alias(heading)
@@ -146,6 +160,7 @@ class Section(object):
 
     @classmethod
     def resolve_alias(cls, heading):
+        """"""
         heading = heading.title()
         try:
             return cls.ALIASES[heading]
@@ -154,6 +169,7 @@ class Section(object):
 
     @property
     def text(self):
+        """"""
         if self.args_formatter is not None:
             s = self.args_formatter(self)
         else:
@@ -162,6 +178,7 @@ class Section(object):
 
     @text.setter
     def text(self, val):
+        """"""
         val = val.rstrip()
         if self.args_parser is not None:
             self.args = self.args_parser(self, val)
@@ -169,6 +186,7 @@ class Section(object):
 
 
 class NapoleonSection(Section):
+    """"""
     ALIASES = {"Args": "Parameters",
                "Arguments": "Parameters",
                "Keyword Args": "Keyword Arguments",
@@ -177,11 +195,16 @@ class NapoleonSection(Section):
               }
 
 class GoogleSection(NapoleonSection):
+    """"""
     first_indent = "    "  # 1st indent is only 2 spaces according to the style
     indent = "    "
 
     @staticmethod
     def finalize_param(s):
+        """
+        Args:
+            s (type): Description
+        """
         if not ":" in s:
             s += ":"
         m = re.match(r"(.*?)\s*(?:\((.*)\))?\s*:\s*(.*)", s, re.DOTALL)
@@ -189,11 +212,15 @@ class GoogleSection(NapoleonSection):
         return Parameter(groups[0], groups[1], groups[2])
 
     def param_parser(self, text):
+        """
+        Args:
+            text (type): Description
+        """
         params = OrderedDict()
         text = dedent_docstr(text)
         s = ""
         for line in text.splitlines():
-            if line[0] not in string.whitespace:
+            if line and line[0] not in string.whitespace:
                 if s:
                     param = self.finalize_param(s)
                     params[param.name] = param
@@ -206,6 +233,7 @@ class GoogleSection(NapoleonSection):
         return params
 
     def param_formatter(self):
+        """"""
         s = ""
         for name, param in self.args.items():
             p = "{0}".format(name)
@@ -221,9 +249,14 @@ class GoogleSection(NapoleonSection):
         return s
 
     def returns_parser(self, text):
+        """
+        Args:
+            text (type): Description
+        """
         return text
 
     def returns_formatter(self):
+        """"""
         return self.args
 
     PARSERS = {"Parameters": (param_parser,
@@ -237,20 +270,25 @@ class GoogleSection(NapoleonSection):
 
 
 class NumpySection(NapoleonSection):
+    """"""
     @staticmethod
     def param_parser(text):
+        """"""
         return text
 
     @staticmethod
     def param_formatter(section):
+        """"""
         return section.args
 
     @staticmethod
     def returns_parser(text):
+        """"""
         return text
 
     @staticmethod
     def returns_formatter(section):
+        """"""
         return section.args
 
     # PARSERS = {"Parameters": (NumpySection.param_parser,
@@ -305,9 +343,15 @@ class Docstring(object):
         raise NotImplementedError("format is an abstract method")
 
     def update_parameters(self):
+        """"""
         raise NotImplementedError()
 
     def finalize_section(self, heading, text):
+        """
+        Args:
+            heading (type): Description
+            text (type): Description
+        """
         section = self.SECTION_STYLE(heading, text)
         self.sections[section.alias] = section
 
@@ -356,16 +400,22 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
 
 
 class GoogleDocstring(NapoleonDocstring):
+    """"""
     SECTION_STYLE = GoogleSection
     SECTION_RE = r"^[A-Za-z0-9][A-Za-z0-9 \t]*:\s*$"
     PREEFERRED_PARAMS_ALIAS = "Args"
 
     @classmethod
     def detect_style(cls, docstr):
+        """"""
         m = re.search(cls.SECTION_RE, docstr, re.MULTILINE)
         return m is not None
 
     def _parse(self, s):
+        """
+        Args:
+            s (type): Description
+        """
         s = dedent_docstr(s)
 
         cur_section = "Summary"
@@ -381,6 +431,11 @@ class GoogleDocstring(NapoleonDocstring):
             self.finalize_section(cur_section, cur_text)
 
     def format(self, top_indent, indent="    "):
+        """
+        Args:
+            top_indent (type): Description
+            indent (type): Description
+        """
         s = ""
         if self.sections["Summary"] is not None:
             text = self.sections["Summary"].text
@@ -398,19 +453,30 @@ class GoogleDocstring(NapoleonDocstring):
 
 
 class NumpyDocstring(NapoleonDocstring):
+    """"""
     SECTION_STYLE = NumpySection
     SECTION_RE = r"^([A-Za-z0-9][A-Za-z0-9 \t]*)\s*\n-+"
     PREEFERRED_PARAMS_ALIAS = "Parameters"
 
     @classmethod
     def detect_style(cls, docstr):
+        """"""
         m = re.search(cls.SECTION_RE, docstr, re.MULTILINE)
         return m is not None
 
     def _parse(self, s):
+        """
+        Args:
+            s (type): Description
+        """
         raise NotImplementedError("TODO: put logic here")
 
     def format(self, top_indent, indent="    "):
+        """
+        Args:
+            top_indent (type): Description
+            indent (type, optional): Description
+        """
         raise NotImplementedError("TODO: put logic here")
 
 STYLE_LOOKUP = OrderedDict([('google', GoogleDocstring),

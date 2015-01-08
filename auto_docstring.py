@@ -135,10 +135,6 @@ def get_docstring(view, edit, target):
     discovery will be consolidated here, so in the future, all we
     have to do is run a replace on an existing docstring.
 
-    Note:
-        If no docstring exists, this will edit the buffer
-        to add one if a sublime.Edit object is given.
-
     Args:
         view: current view
         edit (sublime.Edit or None): ST edit object for inserting
@@ -154,6 +150,10 @@ def get_docstring(view, edit, target):
         style: the character marking the ends of the docstring,
             will be one of [\""", ''', ", ']
         new: True if we inserted a new docstring
+
+    Note:
+        If no docstring exists, this will edit the buffer
+        to add one if a sublime.Edit object is given.
     """
     target_end_lineno, _ = view.rowcol(target.b)
     module_level = (target_end_lineno == 0)
@@ -239,11 +239,12 @@ def get_docstring(view, edit, target):
             if not view.substr(view.full_line(target.b)).endswith("\n"):
                 prefix = "\n"
 
-        stub = "{0}{1}{2} {2}{3}".format(prefix, body_indent_txt, style, suffix)
+        stub = "{0}{1}{2}<FRESHLY_INSERTED>{2}{3}" \
+               "".format(prefix, body_indent_txt, style, suffix)
         view.replace(edit, sublime.Region(a, b), stub)
 
-        whole_region = view.find("{0} {0}".format(style), target.b,
-                                 sublime.LITERAL)
+        whole_region = view.find("{0}<FRESHLY_INSERTED>{0}".format(style),
+                                 target.b, sublime.LITERAL)
         docstr_region = sublime.Region(whole_region.a + len(style),
                                        whole_region.b - len(style))
         new = True
@@ -257,7 +258,6 @@ def is_python_file(view):
 
     Args:
         view: current ST view
-        poop (type): Description
 
     Returns:
         (str, None): "python, "cython", or None if neither
@@ -281,6 +281,7 @@ def get_desired_style(view, default="google"):
 
     Args:
         view: ST view
+        default (type, optional): Description
 
     Returns:
         subclass of docstring_styles.Docstring, for now only
@@ -317,7 +318,16 @@ def get_desired_style(view, default="google"):
         return docstring_styles.STYLE_LOOKUP[style]
 
 def autodoc(view, edit, region, all_defs, desired_style, file_type):
-    """actually do the business of auto-documenting"""
+    """actually do the business of auto-documenting
+
+    Args:
+        view (type): Description
+        edit (type): Description
+        region (type): Description
+        all_defs (type): Description
+        desired_style (type): Description
+        file_type (type): Description
+    """
     target = find_preceeding_declaration(view, all_defs, region)
     # print("TARGET::", target)
     _module_flag = (target.a == target.b == 0)
@@ -339,18 +349,25 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
             for arg in args.split(','):
                 kwsplit = arg.split('=')
                 name = kwsplit[0].strip()
-                if len(params) == 0 and name == "self":
+                if len(kwsplit) > 1:
+                    paramtype = "type, optional"
+                else:
+                    paramtype = "type"
+
+                if len(params) == 0 and (name == "self" or name == "cls"):
                     continue
-                param = docstring_styles.Parameter(name, "type",
+                param = docstring_styles.Parameter(name, paramtype,
                                                    "Description")
                 params[name] = param
             ds.update_parameters(params)
 
     # TODO: modify meta data for changes to parameters
     # print(">> old_docstr", old_docstr)
-    if old_docstr.strip() == "":
-        print("changing docstring")
-        ds.sections["Summary"] = ds.SECTION_STYLE("Summary", "Summary")
+    try:
+        if ds.sections["Summary"].text.strip() == "<FRESHLY_INSERTED>":
+            ds.sections["Summary"] = ds.SECTION_STYLE("Summary", "Summary")
+    except KeyError:
+        pass
 
     # TODO: create new docstring from meta
     new_ds = desired_style(ds)
@@ -362,8 +379,13 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
 
 
 class AutoDocstringCommand(sublime_plugin.TextCommand):
+    """Summary"""
     def run(self, edit):
-        """Insert/Revise docstring for the scope of the cursor location"""
+        """Insert/Revise docstring for the scope of the cursor location
+
+        Args:
+            edit (type): Description
+        """
         print("-> AutoDocstring")
         view = self.view
 
@@ -378,12 +400,18 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
 
         for region in view.sel():
             autodoc(view, edit, region, defs, desired_style, file_type)
+        print("-> AutoDocstring done")
         return None
 
 
 class AutoDocstringAllCommand(sublime_plugin.TextCommand):
+    """Summary"""
     def run(self, edit):
-        """Insert/Revise docstrings whole module"""
+        """Insert/Revise docstrings whole module
+
+        Args:
+            edit (type): Description
+        """
         print("-> AutoDocstringAll")
         view = self.view
 
@@ -394,9 +422,9 @@ class AutoDocstringAllCommand(sublime_plugin.TextCommand):
         desired_style = get_desired_style(view)
 
         defs = find_all_declarations(view, True)
-        # print("DEFS::", defs)
-
-        for d in defs:
+        for i in range(len(defs)):
+            defs = find_all_declarations(view, True)
+            d = defs[i]
             region = sublime.Region(d.b, d.b)
             autodoc(view, edit, region, defs, desired_style, file_type)
         print("-> AutoDocstringAll done")
