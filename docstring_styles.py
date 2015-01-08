@@ -131,8 +131,10 @@ class Section(object):
     _text = None
     first_indent = "    "
     indent = "    "
+    meta = None
 
-    def __init__(self, heading, text="", indent=None, first_indent=None):
+    def __init__(self, heading, text="", indent=None, first_indent=None,
+                 **kwargs):
         """
         Args:
             heading (str): heading of the section (should be title case)
@@ -157,6 +159,7 @@ class Section(object):
             self.first_indent = first_indent
 
         self.text = text
+        self.meta = kwargs
 
     @classmethod
     def resolve_alias(cls, heading):
@@ -271,15 +274,23 @@ class GoogleSection(NapoleonSection):
 
 class NumpySection(NapoleonSection):
     """"""
+    # @staticmethod
+    # def finalize_param(s):
+    #     raise NotImplementedError("TODO: put Numpy logic here")
+
     @staticmethod
     def param_parser(text):
         """"""
-        return text
+        # NOTE: there will be some tricky business if there is a
+        # section break done by "resuming unindented text"
+        raise NotImplementedError("TODO: put Numpy logic here")
 
     @staticmethod
     def param_formatter(section):
         """"""
-        return section.args
+        # NOTE: there will be some tricky business if there is a
+        # section break done by "resuming unindented text"
+        raise NotImplementedError("TODO: put Numpy logic here")
 
     @staticmethod
     def returns_parser(text):
@@ -344,7 +355,7 @@ class Docstring(object):
 
     def update_parameters(self):
         """"""
-        raise NotImplementedError()
+        raise NotImplementedError("update_parameters is an abstract method")
 
     def finalize_section(self, heading, text):
         """
@@ -469,7 +480,7 @@ class NumpyDocstring(NapoleonDocstring):
         Args:
             s (type): Description
         """
-        raise NotImplementedError("TODO: put logic here")
+        raise NotImplementedError("TODO: put Numpy logic here")
 
     def format(self, top_indent, indent="    "):
         """
@@ -477,7 +488,7 @@ class NumpyDocstring(NapoleonDocstring):
             top_indent (type): Description
             indent (type, optional): Description
         """
-        raise NotImplementedError("TODO: put logic here")
+        raise NotImplementedError("TODO: put Numpy logic here")
 
 STYLE_LOOKUP = OrderedDict([('google', GoogleDocstring),
                             ('numpy', NumpyDocstring)])

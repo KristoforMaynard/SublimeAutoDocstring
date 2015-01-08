@@ -1,3 +1,4 @@
 [
-  { "caption": "AutoDocstring: Run", "command": "auto_docstring" },
+  { "caption": "AutoDocstring: Current", "command": "auto_docstring" },
+  { "caption": "AutoDocstring: All", "command": "auto_docstring_all" },
 ]
