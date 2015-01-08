@@ -1,33 +1,63 @@
 # -*- coding: utf-8 -*-
 """Business end of the AutoDocstring plugin"""
 
+# TODO: parse declarations better
+# TODO: custom indentation on parameters
+# TODO: check other and kwargs on update_parameters
+# TODO: detect first_space used in the current docstring?
+
 import os
 import re
 from textwrap import dedent
 from string import whitespace
+from collections import OrderedDict
 
 import sublime
 import sublime_plugin
 
+from . import docstring_styles
 
 _simple_decl_re = r"^[^\S\n]*(def|class)\s+(\S+)\s*\(([\s\S]*?)\)\s*:"
 
 
-def find_preceeding_declaration(defs, view, region):
+def find_all_declarations(view, include_module=False):
+    """Find all complete function/class declarations
+
+    Args:
+        view: current ST view
+        include_module (bool): whether or not to include first
+            character of file for the module docstring
+
+    Returns:
+        list: the ST regions of all the declarations, from
+            'def'/'class' to the ':' inclusive.
+    """
+    defs = view.find_all(_simple_decl_re)
+    # now prune out definitions found in comments / strings
+    _defs = []
+
+    if include_module:
+        _defs.append(sublime.Region(0, 0))
+
+    for d in defs:
+        scope_name = view.scope_name(d.a)
+        if not ("comment" in scope_name or "string" in scope_name):
+            _defs.append(d)
+    return _defs
+
+def find_preceeding_declaration(view, defs, region):
     """Find declaration immediately preceeding the cursor
 
-    Parameters:
-        defs: list of all valid declarations (as regions)
+    Args:
         view: current view in which to search
+        defs: list of all valid declarations (as regions)
         region: region of the current selection
 
     Returns:
-        (region, not_found_flag)
-
-        region: Region of preceeding declaration
-        not_found_flag: True if no declaration was found
+        region: Region of preceeding declaration or None
     """
     preceeding_defs = [d for d in defs if d.a <= region.a]
+    # print("PRECEEDING_DEFS", preceeding_defs)
     target = None
 
     # for bypassing closures... as in, find the function that the
@@ -39,11 +69,18 @@ def find_preceeding_declaration(defs, view, region):
                                            view.line(region).b))
         block = dedent(block)
 
-        if block[0] in whitespace:
+        if len(block) == 0:
+            raise NotImplementedError("Shouldn't be here?")
+        elif d.a == d.b == 0:
+            # in case d is region(0, 0), aka module level
+            is_closure = False
+        elif block[0] in whitespace:
+            # print("block 0 is whitespace")
             is_closure = True
         else:
             for line in block.splitlines()[1:]:
                 if len(line) > 0 and line[0] not in whitespace:
+                    # print("line[0] not whitespace:", line)
                     is_closure = True
                     break
 
@@ -51,15 +88,12 @@ def find_preceeding_declaration(defs, view, region):
             target = d
             break
 
-    if target is None:
-        return sublime.Region(0, 0), True
-    else:
-        return target, False
+    return target
 
 def get_indentation(view, target):
     """Get indentation of a declaration and its body
 
-    Parameters:
+    Args:
         view: current view
         target: region of the declaration of interest
 
@@ -103,10 +137,13 @@ def get_docstring(view, edit, target):
 
     Note:
         If no docstring exists, this will edit the buffer
-        to add one.
+        to add one if a sublime.Edit object is given.
 
-    Parameters:
+    Args:
         view: current view
+        edit (sublime.Edit or None): ST edit object for inserting
+            a new docstring if one does not already exist. None
+            means "don't edit the buffer"
         target: region of the declaration of interest
 
     Returns:
@@ -121,9 +158,18 @@ def get_docstring(view, edit, target):
     target_end_lineno, _ = view.rowcol(target.b)
     module_level = (target_end_lineno == 0)
 
-    # exclude the shebang line by saying it's the declaration
-    if module_level and view.substr(view.line(target)).startswith("#!"):
-        target = view.line(0)
+    # exclude the shebang line / coding line
+    # by saying they're the declaration
+    if module_level:
+        cnt = -1
+        while True:
+            line = view.substr(view.line(cnt + 1))
+            if line.startswith("#!") or line.startswith("# -*-"):
+                cnt += 1
+            else:
+                break
+        if cnt >= 0:
+            target = sublime.Region(view.line(0).a, view.line(cnt).b)
     search_start = target.b
 
     next_chars_reg = view.find(r"\S{1,3}", search_start)
@@ -151,6 +197,7 @@ def get_docstring(view, edit, target):
         style = next_chars[0]
 
     if style:
+        # there exists a docstring, get its region
         docstr_end = view.find(r"(?<!\\){0}".format(style), next_chars_reg.b)
         if docstr_end.a < next_chars_reg.a:
             print("Autodocstr: oops, existing docstring on line",
@@ -161,7 +208,11 @@ def get_docstring(view, edit, target):
         docstr_region = sublime.Region(next_chars_reg.a + len(style),
                                        docstr_end.a)
         new = False
+    elif edit is None:
+        # no docstring exists, and don't make one
+        return None, None, None, False
     else:
+        # no docstring exists, but make / insert one
         style = '"""'
 
         _, body_indent_txt, has_indented_body = get_indentation(view, target)
@@ -199,60 +250,156 @@ def get_docstring(view, edit, target):
 
     return whole_region, docstr_region, style, new
 
+def is_python_file(view):
+    """Check if view is a python file
+
+    Checks file extension and syntax highlighting
+
+    Args:
+        view: current ST view
+        poop (type): Description
+
+    Returns:
+        (str, None): "python, "cython", or None if neither
+    """
+    filename = view.file_name()
+    if filename:
+        _, ext = os.path.splitext(filename)
+    else:
+        ext = ""
+    if ext in ['.py', '.pyx', '.pxd']:
+        return True
+
+    syntax = view.settings().get('syntax')
+    if "Python" in syntax or "Cython" in syntax:
+        return True
+
+    return False
+
+def get_desired_style(view, default="google"):
+    """Get desired style / auto-discover from view if requested
+
+    Args:
+        view: ST view
+
+    Returns:
+        subclass of docstring_styles.Docstring, for now only
+        Google or Numpy
+    """
+    s = sublime.load_settings("AutoDocstring.sublime-settings")
+    style = s.get("style", "auto_google").lower()
+
+    # do we want to auto-discover from the buffer?
+    # TODO: cache auto-discovery using buffer_id?
+    if style.startswith('auto'):
+        try:
+            default = style.split("_")[1]
+        except IndexError:
+            # default already set to google by kwarg
+            pass
+
+        defs = find_all_declarations(view, True)
+        for d in defs:
+            docstr_region = get_docstring(view, None, d)[1]
+            if docstr_region is None:
+                typ = None
+            else:
+                # print("??", docstr_region)
+                docstr = view.substr(docstr_region)
+                typ = docstring_styles.detect_style(docstr)
+
+            if typ is not None:
+                # print("Docstring style auto-detected:", typ)
+                return typ
+
+        return docstring_styles.STYLE_LOOKUP[default]
+    else:
+        return docstring_styles.STYLE_LOOKUP[style]
+
+def autodoc(view, edit, region, all_defs, desired_style, file_type):
+    """actually do the business of auto-documenting"""
+    target = find_preceeding_declaration(view, all_defs, region)
+    # print("TARGET::", target)
+    _module_flag = (target.a == target.b == 0)
+    # print("-> found target", target, _module_flag)
+
+    _, old_docstr_region, _, _ = get_docstring(view, edit, target)
+
+    # TODO: parse existing docstring into meta data
+    old_docstr = view.substr(old_docstr_region)
+    ds = docstring_styles.make_docstring_obj(old_docstr, desired_style)
+
+    # get declaration info
+    if not _module_flag:
+        decl_str = view.substr(target)
+        typ, name, args = re.match(_simple_decl_re, decl_str).groups()  # pylint: disable=unused-variable
+        if typ == "def":
+            params = OrderedDict()
+            # FIXME: this is way to simple for robust parsing
+            for arg in args.split(','):
+                kwsplit = arg.split('=')
+                name = kwsplit[0].strip()
+                if len(params) == 0 and name == "self":
+                    continue
+                param = docstring_styles.Parameter(name, "type",
+                                                   "Description")
+                params[name] = param
+            ds.update_parameters(params)
+
+    # TODO: modify meta data for changes to parameters
+    # print(">> old_docstr", old_docstr)
+    if old_docstr.strip() == "":
+        print("changing docstring")
+        ds.sections["Summary"] = ds.SECTION_STYLE("Summary", "Summary")
+
+    # TODO: create new docstring from meta
+    new_ds = desired_style(ds)
+
+    # -> replace old docstring with the new docstring
+    _, body_indent_txt, _ = get_indentation(view, target)
+    new_docstr = new_ds.format(body_indent_txt)
+    view.replace(edit, old_docstr_region, new_docstr)
+
 
 class AutoDocstringCommand(sublime_plugin.TextCommand):
     def run(self, edit):
         """Insert/Revise docstring for the scope of the cursor location"""
+        print("-> AutoDocstring")
         view = self.view
 
-        # bail if not a python file (i guess cython too)
-        filename = self.view.file_name()
-        if filename:
-            _, ext = os.path.splitext(filename)
-        else:
-            ext = ""
-        syntax = view.settings().get('syntax')
-        if not ("Python" in syntax or "Cython" in syntax or
-                ext in ['.py', '.pyx', '.pxd']):
-            return
+        file_type = is_python_file(view)
+        if not file_type:
+            return None
 
-        # find all complete function definitions
-        defs = self.view.find_all(_simple_decl_re)
-        # now prune out definitions found in comments / strings
-        _defs = []
-        for d in defs:
-            scope_name = view.scope_name(d.a)
-            if not ("comment" in scope_name or "string" in scope_name):
-                _defs.append(d)
-        defs = _defs
+        desired_style = get_desired_style(view)
 
-        # go over each region in the selection
+        defs = find_all_declarations(view, True)
+        # print("DEFS::", defs)
+
         for region in view.sel():
-            target, _module_flag = find_preceeding_declaration(defs, view, region)
+            autodoc(view, edit, region, defs, desired_style, file_type)
+        return None
 
-            # -> pull out docstring region
-            _, old_docstr_region, _, _ = get_docstring(view, edit, target)
 
-            # TODO: parse existing docstring into meta data
-            # decl = Declaration(target)  # put into class?
-            if not _module_flag:
-                decl_str = view.substr(target)
-                typ, name, args = re.match(_simple_decl_re, decl_str).groups()  # pylint: disable=unused-variable
-            else:
-                decl_str = None
-                typ, name, args = None, None, None
+class AutoDocstringAllCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        """Insert/Revise docstrings whole module"""
+        print("-> AutoDocstringAll")
+        view = self.view
 
-            # TODO: modify meta data for changes to parameters
+        file_type = is_python_file(view)
+        if not file_type:
+            return None
 
-            # TODO: create new docstring from meta
-            _, body_indent_txt, _ = get_indentation(view, target)
-            new_docstr = ('ShortDescription\n\n'
-                          '{0}LongDescription\n'
-                          '{0}'.format(body_indent_txt))
+        desired_style = get_desired_style(view)
 
-            # -> replace old docstring with the new docstring
-            view.replace(edit, old_docstr_region, new_docstr)
+        defs = find_all_declarations(view, True)
+        # print("DEFS::", defs)
 
+        for d in defs:
+            region = sublime.Region(d.b, d.b)
+            autodoc(view, edit, region, defs, desired_style, file_type)
+        print("-> AutoDocstringAll done")
         return None
 
 ##

@@ -1,0 +1,4 @@
+[
+  { "keys": ["ctrl+alt+'"], "command": "auto_docstring" },
+  { "keys": ["ctrl+alt+shift+'"], "command": "auto_docstring_all" }
+]
