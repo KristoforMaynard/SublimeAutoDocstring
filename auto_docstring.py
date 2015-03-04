@@ -358,7 +358,9 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
             for arg in args.split(','):
                 kwsplit = arg.split('=')
                 name = kwsplit[0].strip()
-                if len(kwsplit) > 1:
+                if name.startswith('*'):
+                    paramtype = None
+                elif len(kwsplit) > 1:
                     paramtype = "type, optional"
                 else:
                     paramtype = "type"
