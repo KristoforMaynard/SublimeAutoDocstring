@@ -52,16 +52,22 @@ def detect_style(docstr):
             return c
     return None
 
-def dedent_docstr(s):
-    """Dedent all lines except first
+def dedent_docstr(s, n=1):
+    """Dedent all lines except first n lines
 
     Args:
-        s (type): Description
+        s (type): some text to dedent
+        n (int): number of lines to skip, (n == 0 is a normal dedent,
+            n == 1 is useful for whole docstrings)
     """
     lines = s.splitlines()
     if lines:
-        ret = dedent("\n".join(lines[1:]))
-        return lines[0].lstrip() + "\n" + ret
+        ret = dedent("\n".join(lines[n:]))
+        if n == 0:
+            return ret
+        else:
+            first_n_lines = "\n".join([l.lstrip() for l in lines[:n]])
+            return first_n_lines + "\n" + ret
     else:
         return ""
 
@@ -220,7 +226,7 @@ class GoogleSection(NapoleonSection):
             text (type): Description
         """
         params = OrderedDict()
-        text = dedent_docstr(text)
+        text = dedent_docstr(text, 0)
         s = ""
         for line in text.splitlines():
             if line and line[0] not in string.whitespace:
@@ -266,6 +272,8 @@ class GoogleSection(NapoleonSection):
                               param_formatter),
                "Other Parameters": (param_parser,
                                     param_formatter),
+               "Deleted Parameters": (param_parser,
+                                      param_formatter),
                "Keyword Arguments": (param_parser,
                                      param_formatter),
                "Returns": (returns_parser,
@@ -376,6 +384,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                             ("Returns", None),
                             ("Yields", None),
                             ("Other Parameters", None),
+                            ("Deleted Parameters", None),
                             ("Attributes", None),
                             ("Methods", None),
                             ("Raises", None),
@@ -406,6 +415,15 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
 
         if len(current):
             print("Warning, killing parameters named:", list(current.keys()))
+            # TODO: put a switch here for other bahavior?
+            if self.sections["Deleted Parameters"] is None:
+                self.finalize_section("Deleted Parameters", "")
+            deled_params = self.sections["Deleted Parameters"]
+            for key, val in current.items():
+                if key in deled_params.args:
+                    print("Stronger Warning: Killing old deleted param: '{0}'"
+                          "".format(key))
+                deled_params.args[key] = val
 
         self.sections["Parameters"].args = new
 
