@@ -172,14 +172,14 @@ def get_docstring(view, edit, target):
             target = sublime.Region(view.line(0).a, view.line(cnt).b)
     search_start = target.b
 
-    next_chars_reg = view.find(r"\S{1,3}", search_start)
+    next_chars_reg = view.find(r"\S{1,4}", search_start)
     next_chars = view.substr(next_chars_reg)
 
     # hack for if there is a comment at the end of the declaration
     if view.rowcol(next_chars_reg.a)[0] == target_end_lineno and \
        next_chars[0] == '#' and not module_level:
         search_start = view.line(target.b).b
-        next_chars_reg = view.find(r"\S{1,3}", search_start)
+        next_chars_reg = view.find(r"\S{1,4}", search_start)
         next_chars = view.substr(next_chars_reg)
 
     if view.rowcol(next_chars_reg.a)[0] == target_end_lineno:
@@ -191,13 +191,21 @@ def get_docstring(view, edit, target):
     whole_region = None
     docstr_region = None
 
-    if next_chars in ['"""', "'''"]:
-        style = next_chars
-    elif len(next_chars) > 0 and next_chars[0] in ['"', "'"]:
+    # for raw / unicode literals
+    if next_chars.startswith(('r', 'u')):
+        literal_prefix = next_chars[0]
+        next_chars = next_chars[1:]
+    else:
+        literal_prefix = ""
+
+    if next_chars.startswith(('"""', "'''")):
+        style = next_chars[:3]
+    elif next_chars.startswith(('"', "'")):
         style = next_chars[0]
 
     if style:
         # there exists a docstring, get its region
+        next_chars_reg.b = next_chars_reg.a + len(literal_prefix) + len(style)
         docstr_end = view.find(r"(?<!\\){0}".format(style), next_chars_reg.b)
         if docstr_end.a < next_chars_reg.a:
             print("Autodocstr: oops, existing docstring on line",
@@ -205,8 +213,7 @@ def get_docstring(view, edit, target):
             return None, None, None, None
 
         whole_region = sublime.Region(next_chars_reg.a, docstr_end.b)
-        docstr_region = sublime.Region(next_chars_reg.a + len(style),
-                                       docstr_end.a)
+        docstr_region = sublime.Region(next_chars_reg.b, docstr_end.a)
         new = False
     elif edit is None:
         # no docstring exists, and don't make one
