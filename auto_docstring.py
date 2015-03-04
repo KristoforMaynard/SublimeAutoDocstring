@@ -321,12 +321,14 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     """actually do the business of auto-documenting
 
     Args:
-        view (type): Description
-        edit (type): Description
-        region (type): Description
-        all_defs (type): Description
-        desired_style (type): Description
-        file_type (type): Description
+        view: current view
+        edit: current edit context
+        region: region to look backward from to find a
+            definition, usually gotten with view.sel()
+        all_defs (list): list of declaration regions representing
+            all valid declarations
+        desired_style (class): subclass of Docstring
+        file_type (str): 'python' or 'cython', not yet used
     """
     target = find_preceeding_declaration(view, all_defs, region)
     # print("TARGET::", target)
@@ -361,15 +363,13 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
                 params[name] = param
             ds.update_parameters(params)
 
-    # TODO: modify meta data for changes to parameters
-    # print(">> old_docstr", old_docstr)
     try:
         if ds.sections["Summary"].text.strip() == "<FRESHLY_INSERTED>":
             ds.sections["Summary"] = ds.SECTION_STYLE("Summary", "Summary")
     except KeyError:
         pass
 
-    # TODO: create new docstring from meta
+    # -> create new docstring from meta
     new_ds = desired_style(ds)
 
     # -> replace old docstring with the new docstring
@@ -379,7 +379,6 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
 
 
 class AutoDocstringCommand(sublime_plugin.TextCommand):
-    """Summary"""
     def run(self, edit):
         """Insert/Revise docstring for the scope of the cursor location
 
@@ -405,7 +404,6 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
 
 
 class AutoDocstringAllCommand(sublime_plugin.TextCommand):
-    """Summary"""
     def run(self, edit):
         """Insert/Revise docstrings whole module
 
