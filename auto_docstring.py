@@ -354,7 +354,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
         typ, name, args = re.match(_simple_decl_re, decl_str).groups()  # pylint: disable=unused-variable
         if typ == "def":
             params = OrderedDict()
-            # FIXME: this is way to simple for robust parsing
+            # FIXME: this is way too simple for robust parsing
             for arg in args.split(','):
                 kwsplit = arg.split('=')
                 name = kwsplit[0].strip()
