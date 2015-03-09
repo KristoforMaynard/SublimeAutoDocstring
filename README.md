@@ -1,7 +1,7 @@
 SublimeAutoDocstring
 ====================
 
-SublimeText plugin for inserting template docstrings after analyzing
+SublimeText plugin for inserting template docstrings in Python after analyzing
 function parameters and the like.
 
 Features
@@ -20,8 +20,8 @@ Settings
 
   - `style`: can be 'google', 'numpy', or 'auto' for auto-detection based on the other docstrings in the module. A fallback can be specified with something like 'auto_google' in case auto-detection fails. Default is auto_google.
 
-TODO
-----
+Coming Soon
+-----------
   - make more robust function argument parser: at the moment, things go awry when lists/tuples/dicts show up as default values
   - implement Numpy style
   - parse class attributes similar to function/method arguments
