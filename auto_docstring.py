@@ -362,6 +362,10 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
             for arg in args.split(','):
                 kwsplit = arg.split('=')
                 name = kwsplit[0].strip()
+
+                if len(name) == 0:
+                    continue
+
                 if name.startswith('*'):
                     paramtype = None
                 elif len(kwsplit) > 1:

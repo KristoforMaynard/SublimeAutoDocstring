@@ -440,7 +440,10 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                           "".format(key))
                 deled_params.args[key] = val
 
-        self.sections["Parameters"].args = new
+        if len(new) == 0:
+            self.sections["Parameters"] = None
+        else:
+            self.sections["Parameters"].args = new
 
 
 class GoogleDocstring(NapoleonDocstring):
