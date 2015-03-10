@@ -284,42 +284,78 @@ class GoogleSection(NapoleonSection):
 
 class NumpySection(NapoleonSection):
     """"""
-    # @staticmethod
-    # def finalize_param(s):
-    #     raise NotImplementedError("TODO: put Numpy logic here")
+    first_indent = "    "
+    indent = "    "
 
     @staticmethod
-    def param_parser(text):
+    def finalize_param(s):
+        """
+        Args:
+            s (type): Description
+        """
+        m = re.match(r"(.*?)\s*(?::\s*(.*?))?\s*?\n(.*)", s, re.DOTALL)
+        name, typ, desc = m.groups()
+        desc = dedent_docstr(desc, 0)
+        return Parameter(name, typ, desc)
+
+    def param_parser(self, text):
         """"""
         # NOTE: there will be some tricky business if there is a
         # section break done by "resuming unindented text"
-        raise NotImplementedError("TODO: put Numpy logic here")
+        params = OrderedDict()
+        text = dedent_docstr(text, 0)
+        s = ""
+        for line in text.splitlines():
+            if line and line[0] not in string.whitespace:
+                if s:
+                    param = self.finalize_param(s)
+                    params[param.name] = param
+                s = (line + "\n")
+            else:
+                s += (line + "\n")
+        if s:
+            param = self.finalize_param(s)
+            params[param.name] = param
+        return params
 
-    @staticmethod
-    def param_formatter(section):
+    def param_formatter(self):
         """"""
         # NOTE: there will be some tricky business if there is a
         # section break done by "resuming unindented text"
-        raise NotImplementedError("TODO: put Numpy logic here")
+        s = ""
+        for name, param in self.args.items():
+            p = "{0}".format(name)
+            if param.types:
+                types = param.types.strip()
+                if len(types):
+                    p += " : {0}".format(types)
+            p += "\n"
+            desc = param.description.rstrip()
+            lines = [self.first_indent + line for line in desc.splitlines()]
+            if len(lines) == 0 or not lines[-1].strip() == "":
+                lines.append("")
+            p += "\n".join(lines)
+            s += p
+        return s
 
-    @staticmethod
-    def returns_parser(text):
+    def returns_parser(self, text):
         """"""
         return text
 
-    @staticmethod
-    def returns_formatter(section):
+    def returns_formatter(self):
         """"""
-        return section.args
+        return self.args
 
-    # PARSERS = {"Parameters": (NumpySection.param_parser,
-    #                           NumpySection.param_formatter),
-    #            "Other Parameters": (NumpySection.param_parser,
-    #                                 NumpySection.param_formatter),
-    #            "Keyword Parameters": (NumpySection.param_parser,
-    #                                   NumpySection.param_formatter),
-    #            "Returns": (NumpySection.returns_parser,
-    #                        NumpySection.returns_formatter)}
+    PARSERS = {"Parameters": (param_parser,
+                              param_formatter),
+               "Other Parameters": (param_parser,
+                                    param_formatter),
+               "Deleted Parameters": (param_parser,
+                                      param_formatter),
+               "Keyword Arguments": (param_parser,
+                                     param_formatter),
+               "Returns": (returns_parser,
+                           returns_formatter)}
 
 
 class Docstring(object):
@@ -502,7 +538,7 @@ class GoogleDocstring(NapoleonDocstring):
 class NumpyDocstring(NapoleonDocstring):
     """"""
     SECTION_STYLE = NumpySection
-    SECTION_RE = r"^([A-Za-z0-9][A-Za-z0-9 \t]*)\s*\n-+\s*$"
+    SECTION_RE = r"^([A-Za-z0-9][A-Za-z0-9 \t]*)\s*\n-+\s*?$"
     PREEFERRED_PARAMS_ALIAS = "Parameters"
 
     @classmethod
@@ -516,7 +552,29 @@ class NumpyDocstring(NapoleonDocstring):
         Args:
             s (type): Description
         """
-        raise NotImplementedError("TODO: put Numpy logic here")
+        s = dedent_docstr(s)
+
+        heading_inds = []
+        section_titles = []
+        section_texts = []
+        for m in re.finditer(self.SECTION_RE, s, re.MULTILINE):
+            heading_inds.append((m.start(), m.end()))
+            section_titles.append(m.group(1).strip())
+
+        section_titles.insert(0, "Summary")
+        heading_inds.insert(0, (0, 0))
+        heading_inds.append((len(s), None))
+
+        for i, heading_ind in enumerate(heading_inds[1:], 1):
+            text = s[heading_inds[i - 1][1]:heading_ind[0]]
+            if text[:1] == '\n':
+                text = text[1:]
+            elif text[:2] == '\r\n':
+                text = text[2:]
+            section_texts.append(text.rstrip())
+
+        for title, text in zip(section_titles, section_texts):
+            self.finalize_section(title, text)
 
     def format(self, top_indent, indent="    "):
         """
@@ -524,7 +582,22 @@ class NumpyDocstring(NapoleonDocstring):
             top_indent (type): Description
             indent (type, optional): Description
         """
-        raise NotImplementedError("TODO: put Numpy logic here")
+        s = ""
+        if self._section_exists("Summary"):
+            text = self.sections["Summary"].text
+            if len(text.strip()) > 0:
+                s += "{0}".format(text)
+
+        for _, section in islice(self.sections.items(), 1, None):
+            if section is None:
+                continue
+            title = section.heading
+            text = section.text
+            s += "\n{0}\n{1}\n{2}".format(title, "-"*len(title), text)
+
+        s = indent_docstr(s, top_indent)
+
+        return s
 
 
 STYLE_LOOKUP = OrderedDict([('google', GoogleDocstring),
