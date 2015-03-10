@@ -1,3 +1,4 @@
 {
-  "style": "auto_google"
+  "style": "auto_google",
+  "template_order": false
 }

@@ -16,13 +16,15 @@ else:
     string_types = basestring,  # pylint: disable=undefined-variable
 
 
-def make_docstring_obj(docstr, default="google"):
+def make_docstring_obj(docstr, default="google", template_order=False):
     """Detect docstring style and create a Docstring object
 
     Parameters:
         docstr (str): source docstring
         default (str, class): 'google', 'numpy' or subclass
             of Docstring
+            template_order (bool, optional): iff True, reorder the
+                sections to match the order they appear in the template
 
     Returns:
         subclass of Docstring
@@ -33,7 +35,7 @@ def make_docstring_obj(docstr, default="google"):
             typ = default
         else:
             typ = STYLE_LOOKUP[default.lower()]
-    return typ(docstr)
+    return typ(docstr, template_order=template_order)
 
 def detect_style(docstr):
     """Detect docstr style from existing docstring
@@ -329,15 +331,20 @@ class Docstring(object):
 
     sections = None
 
-    def __init__(self, docstr):
+    def __init__(self, docstr, template_order=False):
         """
         Parameters:
             docstr (Docstring or str): some existing docstring
+            template_order (bool, optional): iff True, reorder the
+                sections to match the order they appear in the template
         """
         if isinstance(docstr, Docstring):
             self.sections = docstr.sections
         elif isinstance(docstr, string_types):
-            self.sections = self.TEMPLATE.copy()
+            if template_order:
+                self.sections = self.TEMPLATE.copy()
+            else:
+                self.sections = OrderedDict()
             self._parse(docstr)
 
     def _parse(self, s):
@@ -361,7 +368,7 @@ class Docstring(object):
         """
         raise NotImplementedError("format is an abstract method")
 
-    def update_parameters(self):
+    def update_parameters(self, params):
         """"""
         raise NotImplementedError("update_parameters is an abstract method")
 
@@ -373,6 +380,13 @@ class Docstring(object):
         """
         section = self.SECTION_STYLE(heading, text)
         self.sections[section.alias] = section
+
+    def _section_exists(self, section_name):
+        """returns True iff section exists, and was finalized"""
+        if section_name in self.sections:
+            if self.sections[section_name] is not None:
+                return True
+        return False
 
 
 class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
@@ -403,10 +417,11 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         Args:
             params (OrderedDict): params objects keyed by their names
         """
-        if self.sections["Parameters"] is None and len(params) == 0:
+        if not self._section_exists("Parameters") and len(params) == 0:
             return None
-        elif self.sections["Parameters"] is None:
+        elif not self._section_exists("Parameters"):
             self.finalize_section(self.PREFERRED_PARAMS_ALIAS, "")
+
         current = self.sections["Parameters"].args
 
         new = OrderedDict()
@@ -416,7 +431,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         if len(current):
             print("Warning, killing parameters named:", list(current.keys()))
             # TODO: put a switch here for other bahavior?
-            if self.sections["Deleted Parameters"] is None:
+            if not self._section_exists("Deleted Parameters"):
                 self.finalize_section("Deleted Parameters", "")
             deled_params = self.sections["Deleted Parameters"]
             for key, val in current.items():
@@ -466,7 +481,7 @@ class GoogleDocstring(NapoleonDocstring):
             indent (type): Description
         """
         s = ""
-        if self.sections["Summary"] is not None:
+        if self._section_exists("Summary"):
             text = self.sections["Summary"].text
             if len(text.strip()) > 0:
                 s += "{0}".format(text)

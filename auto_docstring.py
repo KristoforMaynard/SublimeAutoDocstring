@@ -17,6 +17,7 @@ import sublime_plugin
 
 from . import docstring_styles
 
+_SETTINGS_FNAME = "AutoDocstring.sublime-settings"
 _simple_decl_re = r"^[^\S\n]*(def|class)\s+(\S+)\s*\(([\s\S]*?)\)\s*:"
 
 
@@ -294,7 +295,7 @@ def get_desired_style(view, default="google"):
         subclass of docstring_styles.Docstring, for now only
         Google or Numpy
     """
-    s = sublime.load_settings("AutoDocstring.sublime-settings")
+    s = sublime.load_settings(_SETTINGS_FNAME)
     style = s.get("style", "auto_google").lower()
 
     # do we want to auto-discover from the buffer?
@@ -346,7 +347,10 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
 
     # TODO: parse existing docstring into meta data
     old_docstr = view.substr(old_docstr_region)
-    ds = docstring_styles.make_docstring_obj(old_docstr, desired_style)
+    settings = sublime.load_settings(_SETTINGS_FNAME)
+    template_order = settings.get("template_order", False)
+    ds = docstring_styles.make_docstring_obj(old_docstr, desired_style,
+                                             template_order=template_order)
 
     # get declaration info
     if not _module_flag:
