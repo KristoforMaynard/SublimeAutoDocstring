@@ -347,7 +347,8 @@ def parse_function_params(s, default_description="Description"):
 
     # match up default values with keyword arguments from the ast
     defaults = [None] * len(arg_ids)
-    defaults[-len(default_nodes):] = default_nodes
+    if len(default_nodes):
+        defaults[-len(default_nodes):] = default_nodes
 
     if tree.body.args.vararg:
         arg_ids.append("*{0}".format(tree.body.args.vararg.arg))
@@ -355,6 +356,10 @@ def parse_function_params(s, default_description="Description"):
     if tree.body.args.kwarg:
         arg_ids.append("**{0}".format(tree.body.args.kwarg.arg))
         defaults.append(None)
+
+    if len(arg_ids) and (arg_ids[0] == "self" or arg_ids[0] == "cls"):
+        arg_ids.pop(0)
+        defaults.pop(0)
 
     # now fill a params dict
     params = OrderedDict()
