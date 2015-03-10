@@ -502,7 +502,7 @@ class GoogleDocstring(NapoleonDocstring):
 class NumpyDocstring(NapoleonDocstring):
     """"""
     SECTION_STYLE = NumpySection
-    SECTION_RE = r"^([A-Za-z0-9][A-Za-z0-9 \t]*)\s*\n-+"
+    SECTION_RE = r"^([A-Za-z0-9][A-Za-z0-9 \t]*)\s*\n-+\s*$"
     PREEFERRED_PARAMS_ALIAS = "Parameters"
 
     @classmethod
@@ -525,6 +525,7 @@ class NumpyDocstring(NapoleonDocstring):
             indent (type, optional): Description
         """
         raise NotImplementedError("TODO: put Numpy logic here")
+
 
 STYLE_LOOKUP = OrderedDict([('google', GoogleDocstring),
                             ('numpy', NumpyDocstring)])
