@@ -486,7 +486,7 @@ class GoogleDocstring(NapoleonDocstring):
     """"""
     SECTION_STYLE = GoogleSection
     SECTION_RE = r"^[A-Za-z0-9][A-Za-z0-9 \t]*:\s*$"
-    PREEFERRED_PARAMS_ALIAS = "Args"
+    PREFERRED_PARAMS_ALIAS = "Args"
 
     @classmethod
     def detect_style(cls, docstr):
@@ -539,7 +539,7 @@ class NumpyDocstring(NapoleonDocstring):
     """"""
     SECTION_STYLE = NumpySection
     SECTION_RE = r"^([A-Za-z0-9][A-Za-z0-9 \t]*)\s*\n-+\s*?$"
-    PREEFERRED_PARAMS_ALIAS = "Parameters"
+    PREFERRED_PARAMS_ALIAS = "Parameters"
 
     @classmethod
     def detect_style(cls, docstr):
