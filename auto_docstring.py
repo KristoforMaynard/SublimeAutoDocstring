@@ -346,15 +346,23 @@ def parse_function_params(s, default_description="Description"):
     default_nodes = tree.body.args.defaults
 
     # match up default values with keyword arguments from the ast
-    defaults = [None] * len(arg_ids)
+    defaults = ["type"] * len(arg_ids)
     if len(default_nodes):
         defaults[-len(default_nodes):] = default_nodes
 
     if tree.body.args.vararg:
-        arg_ids.append("*{0}".format(tree.body.args.vararg.arg))
+        try:
+            name = tree.body.args.vararg.arg
+        except AttributeError:
+            name = tree.body.args.vararg
+        arg_ids.append("*{0}".format(name))
         defaults.append(None)
     if tree.body.args.kwarg:
-        arg_ids.append("**{0}".format(tree.body.args.kwarg.arg))
+        try:
+            name = tree.body.args.kwarg.arg
+        except AttributeError:
+            name = tree.body.args.kwarg
+        arg_ids.append("**{0}".format(name))
         defaults.append(None)
 
     if len(arg_ids) and (arg_ids[0] == "self" or arg_ids[0] == "cls"):
@@ -366,7 +374,9 @@ def parse_function_params(s, default_description="Description"):
     for name, default in zip(arg_ids, defaults):
         default_class_name = default.__class__.__name__
         if default is None:
-            paramtype = "type"
+            paramtype = None
+        elif default == "type":
+            paramtype = default
         elif default_class_name == "NameConstant":
             if default.value is None:
                 paramtype = "type"
