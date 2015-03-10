@@ -366,12 +366,17 @@ def parse_function_params(s, default_description="Description"):
     for name, default in zip(arg_ids, defaults):
         default_class_name = default.__class__.__name__
         if default is None:
-            paramtype = None
+            paramtype = "type"
         elif default_class_name == "NameConstant":
             if default.value is None:
-                paramtype = None
+                paramtype = "type"
             else:
                 paramtype = default.value.__class__.__name__
+        elif default_class_name == "Name":
+            if default.id in ["True", "False"]:
+                paramtype = "bool"
+            else:
+                paramtype = "type"
         elif default_class_name == "Num":
             paramtype = default.n.__class__.__name__
         else:
