@@ -23,8 +23,8 @@ def make_docstring_obj(docstr, default="google", template_order=False):
         docstr (str): source docstring
         default (str, class): 'google', 'numpy' or subclass
             of Docstring
-            template_order (bool, optional): iff True, reorder the
-                sections to match the order they appear in the template
+        template_order (bool, optional): iff True, reorder the
+            sections to match the order they appear in the template
 
     Returns:
         subclass of Docstring
