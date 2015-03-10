@@ -26,5 +26,4 @@ Settings
 Coming Soon
 -----------
 
-  - make more robust function argument parser: at the moment, things go awry when lists/tuples/dicts show up as default values
   - parse class attributes similar to function/method arguments

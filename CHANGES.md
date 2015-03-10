@@ -4,7 +4,8 @@
 
 Features:
   - add Numpy docstring style
-  - Let sections preserve their existing order (configurable via the template_order setting)
+  - let sections preserve their existing order (configurable via the template_order setting)
+  - can parse any valid function declaration and auto-discovers kwarg types
 
 Bugfixes:
   - indentation bug on module level functions

@@ -11,6 +11,7 @@ import re
 from textwrap import dedent
 from string import whitespace
 from collections import OrderedDict
+import ast
 
 import sublime
 import sublime_plugin
@@ -325,6 +326,57 @@ def get_desired_style(view, default="google"):
     else:
         return docstring_styles.STYLE_LOOKUP[style]
 
+def parse_function_params(s, default_description="Description"):
+    """Parse function parameters into an OrderedDict of Parameters
+
+    Args:
+        s (str): everything in the parenthesis of a function
+            declaration
+        default_description (str): default text
+
+    Returns:
+        OrderedDict containing Parameter instances
+    """
+    # Note: use of the ast here is all python3 specific... the attributes
+    # and names of items in the ast have changed significantly
+
+    # pretend the args go to a lambda func, then get an ast for the lambda
+    tree = ast.parse("lambda {0}: None".format(s), mode='eval')
+    arg_ids = [arg.arg for arg in tree.body.args.args]
+    default_nodes = tree.body.args.defaults
+
+    # match up default values with keyword arguments from the ast
+    defaults = [None] * len(arg_ids)
+    defaults[-len(default_nodes):] = default_nodes
+
+    if tree.body.args.vararg:
+        arg_ids.append("*{0}".format(tree.body.args.vararg.arg))
+        defaults.append(None)
+    if tree.body.args.kwarg:
+        arg_ids.append("**{0}".format(tree.body.args.kwarg.arg))
+        defaults.append(None)
+
+    # now fill a params dict
+    params = OrderedDict()
+    for name, default in zip(arg_ids, defaults):
+        default_class_name = default.__class__.__name__
+        if default is None:
+            paramtype = None
+        elif default_class_name == "NameConstant":
+            if default.value is None:
+                paramtype = None
+            else:
+                paramtype = default.value.__class__.__name__
+        elif default_class_name == "Num":
+            paramtype = default.n.__class__.__name__
+        else:
+            paramtype = default_class_name.lower()
+        param = docstring_styles.Parameter(name, paramtype,
+                                           default_description)
+        params[name] = param
+
+    return params
+
 def autodoc(view, edit, region, all_defs, desired_style, file_type):
     """actually do the business of auto-documenting
 
@@ -357,27 +409,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
         decl_str = view.substr(target)
         typ, name, args = re.match(_simple_decl_re, decl_str).groups()  # pylint: disable=unused-variable
         if typ == "def":
-            params = OrderedDict()
-            # FIXME: this is way too simple for robust parsing
-            for arg in args.split(','):
-                kwsplit = arg.split('=')
-                name = kwsplit[0].strip()
-
-                if len(name) == 0:
-                    continue
-
-                if name.startswith('*'):
-                    paramtype = None
-                elif len(kwsplit) > 1:
-                    paramtype = "type, optional"
-                else:
-                    paramtype = "type"
-
-                if len(params) == 0 and (name == "self" or name == "cls"):
-                    continue
-                param = docstring_styles.Parameter(name, paramtype,
-                                                   "Description")
-                params[name] = param
+            params = parse_function_params(args)
             ds.update_parameters(params)
 
     try:
