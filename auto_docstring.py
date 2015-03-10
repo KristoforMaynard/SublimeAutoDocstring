@@ -123,7 +123,7 @@ def get_indentation(view, target):
         try:
             single_indent = def_indent_txt[:len(def_indent_txt) // def_level]
         except ZeroDivisionError:
-            single_indent = ""
+            single_indent = "    "
         body_indent_txt = def_indent_txt + single_indent
 
     return def_indent_txt, body_indent_txt, has_indented_body
