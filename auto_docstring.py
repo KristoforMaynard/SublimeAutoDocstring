@@ -48,8 +48,8 @@ def find_all_declarations(view, include_module=False):
             _defs.append(d)
     return _defs
 
-def find_preceeding_declaration(view, defs, region):
-    """Find declaration immediately preceeding the cursor
+def find_preceding_declaration(view, defs, region):
+    """Find declaration immediately preceding the cursor
 
     Args:
         view: current view in which to search
@@ -57,16 +57,16 @@ def find_preceeding_declaration(view, defs, region):
         region: region of the current selection
 
     Returns:
-        region: Region of preceeding declaration or None
+        region: Region of preceding declaration or None
     """
-    preceeding_defs = [d for d in defs if d.a <= region.a]
-    # print("PRECEEDING_DEFS", preceeding_defs)
+    preceding_defs = [d for d in defs if d.a <= region.a]
+    # print("PRECEDING_DEFS", preceding_defs)
     target = None
 
     # for bypassing closures... as in, find the function that the
     # selection actually belongs to, don't just pick the first
-    # preceeding "def" since it could be a closure
-    for d in reversed(preceeding_defs):
+    # preceding "def" since it could be a closure
+    for d in reversed(preceding_defs):
         is_closure = False
         block = view.substr(sublime.Region(view.line(d).a,
                                            view.line(region).b))
@@ -415,7 +415,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
         desired_style (class): subclass of Docstring
         file_type (str): 'python' or 'cython', not yet used
     """
-    target = find_preceeding_declaration(view, all_defs, region)
+    target = find_preceding_declaration(view, all_defs, region)
     # print("TARGET::", target)
     _module_flag = (target.a == target.b == 0)
     # print("-> found target", target, _module_flag)

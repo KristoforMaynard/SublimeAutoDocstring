@@ -14,7 +14,7 @@ Features
 Usage
 -----
 
-  - <`cmd` + `alt` + `'`> will update a docstring for the first module/class/function preceeding the cursor.
+  - <`cmd` + `alt` + `'`> will update a docstring for the first module/class/function preceding the cursor.
   - <`cmd` + `alt` + `shift` + `'`> will update docstrings for every class/method/function in the current file
 
 Settings
