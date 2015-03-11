@@ -93,12 +93,14 @@ def find_preceding_declaration(view, defs, region):
 
     return target
 
-def get_indentation(view, target):
+def get_indentation(view, target, module_decl=False):
     """Get indentation of a declaration and its body
 
     Args:
         view: current view
         target: region of the declaration of interest
+        module_decl (bool, optional): whether or not this is for
+            doc'ing a module... changes default body_indent_txt
 
     Returns:
         (decl_indent, body_indent, has_indented_body)
@@ -125,7 +127,10 @@ def get_indentation(view, target):
         try:
             single_indent = def_indent_txt[:len(def_indent_txt) // def_level]
         except ZeroDivisionError:
-            single_indent = "    "
+            if module_decl:
+                single_indent = ""
+            else:
+                single_indent = "    "
         body_indent_txt = def_indent_txt + single_indent
 
     return def_indent_txt, body_indent_txt, has_indented_body
@@ -225,7 +230,8 @@ def get_docstring(view, edit, target):
         # no docstring exists, but make / insert one
         style = '"""'
 
-        _, body_indent_txt, has_indented_body = get_indentation(view, target)
+        _, body_indent_txt, has_indented_body = get_indentation(view, target,
+                                                                module_level)
 
         if same_line:
             # used if the function body starts on the same line as declaration
@@ -453,7 +459,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     new_ds = desired_style(ds)
 
     # -> replace old docstring with the new docstring
-    _, body_indent_txt, _ = get_indentation(view, target)
+    _, body_indent_txt, _ = get_indentation(view, target, _module_flag)
     new_docstr = new_ds.format(body_indent_txt)
     view.replace(edit, old_docstr_region, new_docstr)
 

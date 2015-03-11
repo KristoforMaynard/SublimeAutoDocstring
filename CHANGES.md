@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.4
+  - fix indentations on module docstrings
+
 ## 0.2.3
   - give the user some feedback in the status bar
 
