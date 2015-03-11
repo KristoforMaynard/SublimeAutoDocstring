@@ -11,6 +11,7 @@ import re
 from textwrap import dedent
 from string import whitespace
 from collections import OrderedDict
+from itertools import count
 import ast
 
 import sublime
@@ -326,7 +327,8 @@ def get_desired_style(view, default="google"):
     else:
         return docstring_styles.STYLE_LOOKUP[style]
 
-def parse_function_params(s, default_description="Description"):
+def parse_function_params(s, default_type="TYPE",
+                          default_description="Description"):
     """Parse function parameters into an OrderedDict of Parameters
 
     Args:
@@ -345,10 +347,15 @@ def parse_function_params(s, default_description="Description"):
     arg_ids = [arg.arg for arg in tree.body.args.args]
     default_nodes = tree.body.args.defaults
 
+    if len(arg_ids) and (arg_ids[0] == "self" or arg_ids[0] == "cls"):
+        if len(default_nodes) == len(arg_ids):
+            default_nodes.pop(0)
+        arg_ids.pop(0)
+
     # match up default values with keyword arguments from the ast
-    defaults = ["type"] * len(arg_ids)
-    if len(default_nodes):
-        defaults[-len(default_nodes):] = default_nodes
+    kwargs_begin = len(arg_ids) - len(default_nodes)
+    kwargs_end = len(arg_ids)
+    defaults = [default_type] * kwargs_begin + default_nodes
 
     if tree.body.args.vararg:
         try:
@@ -365,32 +372,30 @@ def parse_function_params(s, default_description="Description"):
         arg_ids.append("**{0}".format(name))
         defaults.append(None)
 
-    if len(arg_ids) and (arg_ids[0] == "self" or arg_ids[0] == "cls"):
-        arg_ids.pop(0)
-        defaults.pop(0)
-
     # now fill a params dict
     params = OrderedDict()
-    for name, default in zip(arg_ids, defaults):
+    for i, name, default in zip(count(), arg_ids, defaults):
         default_class_name = default.__class__.__name__
         if default is None:
             paramtype = None
-        elif default == "type":
+        elif default == default_type:
             paramtype = default
         elif default_class_name == "NameConstant":
             if default.value is None:
-                paramtype = "type"
+                paramtype = default_type
             else:
                 paramtype = default.value.__class__.__name__
         elif default_class_name == "Name":
             if default.id in ["True", "False"]:
                 paramtype = "bool"
             else:
-                paramtype = "type"
+                paramtype = default_type
         elif default_class_name == "Num":
             paramtype = default.n.__class__.__name__
         else:
             paramtype = default_class_name.lower()
+        if kwargs_begin <= i and i < kwargs_end:
+            paramtype += ", optional"
         param = docstring_styles.Parameter(name, paramtype,
                                            default_description)
         params[name] = param
