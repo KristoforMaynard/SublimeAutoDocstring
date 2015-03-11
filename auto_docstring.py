@@ -334,6 +334,7 @@ def parse_function_params(s, default_type="TYPE",
     Args:
         s (str): everything in the parenthesis of a function
             declaration
+        default_type (str, optional): default type text
         default_description (str): default text
 
     Returns:
@@ -343,6 +344,8 @@ def parse_function_params(s, default_type="TYPE",
     # and names of items in the ast have changed significantly
 
     # pretend the args go to a lambda func, then get an ast for the lambda
+    s = s.replace("\r\n", "")
+    s = s.replace("\n", "")
     tree = ast.parse("lambda {0}: None".format(s), mode='eval')
     try:
         arg_ids = [arg.arg for arg in tree.body.args.args]

@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.2
+  - fix parsing multi-line function definitions
+
 ## 0.2.1
   - fix misspelling
 
