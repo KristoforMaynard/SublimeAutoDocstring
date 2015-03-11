@@ -600,8 +600,8 @@ class NumpyDocstring(NapoleonDocstring):
         return s
 
 
-STYLE_LOOKUP = OrderedDict([('google', GoogleDocstring),
-                            ('numpy', NumpyDocstring)])
+STYLE_LOOKUP = OrderedDict([('numpy', NumpyDocstring),
+                            ('google', GoogleDocstring)])
 
 ##
 ## EOF
