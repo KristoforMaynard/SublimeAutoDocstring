@@ -346,8 +346,8 @@ def parse_function_params(s, default_type="TYPE",
     Returns:
         OrderedDict containing Parameter instances
     """
-    # Note: use of the ast here is all python3 specific... the attributes
-    # and names of items in the ast have changed significantly
+    # Note: this use of ast Nodes seems to work for python2.6 - python3.4,
+    # but there is no guarentee that it'll continue to work in future versions
 
     # pretend the args go to a lambda func, then get an ast for the lambda
     s = s.replace("\r\n", "")
