@@ -465,21 +465,26 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
         Args:
             edit (type): Description
         """
-        print("-> AutoDocstring")
-        view = self.view
+        try:
+            view = self.view
 
-        file_type = is_python_file(view)
-        if not file_type:
-            return None
+            file_type = is_python_file(view)
+            if not file_type:
+                raise TypeError("Not a python file")
 
-        desired_style = get_desired_style(view)
+            desired_style = get_desired_style(view)
 
-        defs = find_all_declarations(view, True)
-        # print("DEFS::", defs)
+            defs = find_all_declarations(view, True)
+            # print("DEFS::", defs)
 
-        for region in view.sel():
-            autodoc(view, edit, region, defs, desired_style, file_type)
-        print("-> AutoDocstring done")
+            for region in view.sel():
+                autodoc(view, edit, region, defs, desired_style, file_type)
+        except Exception:
+            sublime.status_message("AutoDocstring is confused :-S, check "
+                                   "console")
+            raise
+        else:
+            sublime.status_message("AutoDoc'ed :-)")
         return None
 
 
@@ -490,22 +495,27 @@ class AutoDocstringAllCommand(sublime_plugin.TextCommand):
         Args:
             edit (type): Description
         """
-        print("-> AutoDocstringAll")
-        view = self.view
+        try:
+            view = self.view
 
-        file_type = is_python_file(view)
-        if not file_type:
-            return None
+            file_type = is_python_file(view)
+            if not file_type:
+                raise TypeError("Not a python file")
 
-        desired_style = get_desired_style(view)
+            desired_style = get_desired_style(view)
 
-        defs = find_all_declarations(view, True)
-        for i in range(len(defs)):
             defs = find_all_declarations(view, True)
-            d = defs[i]
-            region = sublime.Region(d.b, d.b)
-            autodoc(view, edit, region, defs, desired_style, file_type)
-        print("-> AutoDocstringAll done")
+            for i in range(len(defs)):
+                defs = find_all_declarations(view, True)
+                d = defs[i]
+                region = sublime.Region(d.b, d.b)
+                autodoc(view, edit, region, defs, desired_style, file_type)
+        except Exception:
+            sublime.status_message("AutoDocstring is confused :-S, check "
+                                   "console")
+            raise
+        else:
+            sublime.status_message("AutoDoc'ed :-)")
         return None
 
 ##

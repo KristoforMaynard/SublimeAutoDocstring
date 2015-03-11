@@ -1,5 +1,8 @@
 # Changelog
 
+## 0.2.3
+  - give the user some feedback in the status bar
+
 ## 0.2.2
   - fix parsing multi-line function definitions
 
