@@ -344,7 +344,10 @@ def parse_function_params(s, default_type="TYPE",
 
     # pretend the args go to a lambda func, then get an ast for the lambda
     tree = ast.parse("lambda {0}: None".format(s), mode='eval')
-    arg_ids = [arg.arg for arg in tree.body.args.args]
+    try:
+        arg_ids = [arg.arg for arg in tree.body.args.args]
+    except AttributeError:
+        arg_ids = [arg.id for arg in tree.body.args.args]
     default_nodes = tree.body.args.defaults
 
     if len(arg_ids) and (arg_ids[0] == "self" or arg_ids[0] == "cls"):
