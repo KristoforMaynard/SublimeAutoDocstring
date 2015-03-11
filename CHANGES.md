@@ -1,6 +1,9 @@
 # Changelog
 
-## master branch
+## 0.2.1
+  - fix misspelling
+
+## 0.2.0
 
 Features:
   - add Numpy docstring style
