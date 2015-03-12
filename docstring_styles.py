@@ -463,6 +463,9 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
 
         current = self.sections["Parameters"].args
 
+        # FIXME: numpy docstrings can put > 1 parameter on a line if they
+        # have the same type / description... this approach does not support
+        # that behavior
         new = OrderedDict()
         for name, param in params.items():
             new[name] = current.pop(name, param)
