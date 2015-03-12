@@ -432,7 +432,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     _module_flag = (target.a == target.b == 0)
     # print("-> found target", target, _module_flag)
 
-    _, old_docstr_region, _, _ = get_docstring(view, edit, target)
+    _, old_docstr_region, _, is_new = get_docstring(view, edit, target)
 
     # TODO: parse existing docstring into meta data
     old_docstr = view.substr(old_docstr_region)
@@ -449,11 +449,11 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
             params = parse_function_params(args)
             ds.update_parameters(params)
 
-    try:
-        if ds.sections["Summary"].text.strip() == "<FRESHLY_INSERTED>":
-            ds.sections["Summary"] = ds.SECTION_STYLE("Summary", "Summary")
-    except KeyError:
-        pass
+    if is_new:
+        ds.finalize_section("Summary", "Summary")
+
+    if is_new:
+        ds.add_dummy_returns("TYPE", "Description")
 
     # -> create new docstring from meta
     new_ds = desired_style(ds)

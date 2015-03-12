@@ -1,5 +1,9 @@
 # Changelog
 
+## master branch
+  Features:
+    - add template Returns with new docstrings
+
 ## 0.2.4
   - fix indentations on module docstrings
 

@@ -408,6 +408,9 @@ class Docstring(object):
         """"""
         raise NotImplementedError("update_parameters is an abstract method")
 
+    def add_dummy_returns(self, typ, description):
+        raise NotImplementedError("add_dummy_returns is an abstract method")
+
     def finalize_section(self, heading, text):
         """
         Args:
@@ -417,7 +420,7 @@ class Docstring(object):
         section = self.SECTION_STYLE(heading, text)
         self.sections[section.alias] = section
 
-    def _section_exists(self, section_name):
+    def section_exists(self, section_name):
         """returns True iff section exists, and was finalized"""
         if section_name in self.sections:
             if self.sections[section_name] is not None:
@@ -453,9 +456,9 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         Args:
             params (OrderedDict): params objects keyed by their names
         """
-        if not self._section_exists("Parameters") and len(params) == 0:
+        if not self.section_exists("Parameters") and len(params) == 0:
             return None
-        elif not self._section_exists("Parameters"):
+        elif not self.section_exists("Parameters"):
             self.finalize_section(self.PREFERRED_PARAMS_ALIAS, "")
 
         current = self.sections["Parameters"].args
@@ -467,7 +470,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         if len(current):
             print("Warning, killing parameters named:", list(current.keys()))
             # TODO: put a switch here for other bahavior?
-            if not self._section_exists("Deleted Parameters"):
+            if not self.section_exists("Deleted Parameters"):
                 self.finalize_section("Deleted Parameters", "")
             deled_params = self.sections["Deleted Parameters"]
             for key, val in current.items():
@@ -520,7 +523,7 @@ class GoogleDocstring(NapoleonDocstring):
             indent (type): Description
         """
         s = ""
-        if self._section_exists("Summary"):
+        if self.section_exists("Summary"):
             text = self.sections["Summary"].text
             if len(text.strip()) > 0:
                 s += "{0}".format(text)
@@ -533,6 +536,11 @@ class GoogleDocstring(NapoleonDocstring):
         s = indent_docstr(s, top_indent)
 
         return s
+
+    def add_dummy_returns(self, typ, description):
+        if not self.section_exists("Returns"):
+            text = "    {0}: {1}".format(typ, description)
+            self.finalize_section("Returns", text)
 
 
 class NumpyDocstring(NapoleonDocstring):
@@ -583,7 +591,7 @@ class NumpyDocstring(NapoleonDocstring):
             indent (type, optional): Description
         """
         s = ""
-        if self._section_exists("Summary"):
+        if self.section_exists("Summary"):
             text = self.sections["Summary"].text
             if len(text.strip()) > 0:
                 s += "{0}".format(text)
@@ -598,6 +606,11 @@ class NumpyDocstring(NapoleonDocstring):
         s = indent_docstr(s, top_indent)
 
         return s
+
+    def add_dummy_returns(self, typ, description):
+        if not self.section_exists("Returns"):
+            text = "{0} : {1}".format(typ, description)
+            self.finalize_section("Returns", text)
 
 
 STYLE_LOOKUP = OrderedDict([('numpy', NumpyDocstring),
