@@ -1,6 +1,8 @@
 # Changelog
 
 ## master branch
+
+## 0.2.5
   Features:
     - add template Returns with new docstrings
 
