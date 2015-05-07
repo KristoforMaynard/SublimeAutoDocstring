@@ -102,25 +102,28 @@ def indent_docstr(s, indent):
 
 class Parameter(object):
     """"""
-    name = None
+    names = None
     types = None
     description = None
+    tag = None
     meta = None
 
-    def __init__(self, name, types, description, **kwargs):
+    def __init__(self, names, types, description, tag=None, **kwargs):
         """
         Args:
-            name (type): Description
-            types (type): Description
-            description (type): Description
-            **kwargs (type): Description
+            names (list): list of names
+            types (str): string describing data types
+            description (str): description text
+            tag (int): some meaningful index? not fleshed out yet
+            **kwargs: Description
         """
-        assert name is not None
+        assert names is not None
         if description is None:
             description = ""
-        self.name = name
+        self.names = names
         self.types = types
         self.description = description
+        self.tag = tag
         self.meta = kwargs
 
 
@@ -211,43 +214,55 @@ class GoogleSection(NapoleonSection):
     indent = "    "
 
     @staticmethod
-    def finalize_param(s):
+    def finalize_param(s, tag):
         """
         Args:
             s (type): Description
+            tag (int): index of param? not fleshed out yet
         """
         if not ":" in s:
             s += ":"
         m = re.match(r"(.*?)\s*(?:\((.*)\))?\s*:\s*(.*)", s, re.DOTALL)
         groups = m.groups()
-        return Parameter(groups[0], groups[1], groups[2])
+        names = [n.strip() for n in groups[0].split(',')]
+        types = groups[1]
+        descr = groups[2]
+        return Parameter(names, types, descr, tag=tag)
 
     def param_parser(self, text):
         """
         Args:
             text (type): Description
         """
-        params = OrderedDict()
+        param_dict = OrderedDict()
+        param_list = []
         text = dedent_docstr(text, 0)
         s = ""
         for line in text.splitlines():
             if line and line[0] not in string.whitespace:
                 if s:
-                    param = self.finalize_param(s)
-                    params[param.name] = param
+                    param = self.finalize_param(s, len(param_list))
+                    param_list.append(param)
+                    for name in param.names:
+                        param_dict[name] = param
                 s = (line + "\n")
             else:
                 s += (line + "\n")
         if s:
-            param = self.finalize_param(s)
-            params[param.name] = param
-        return params
+            param = self.finalize_param(s, len(param_list))
+            param_list.append(param)
+            for name in param.names:
+                param_dict[name] = param
+        return param_dict
 
     def param_formatter(self):
         """"""
         s = ""
-        for name, param in self.args.items():
-            p = "{0}".format(name)
+        for param in self.args.values():
+            if len(param.names) > 1:
+                print("WARNING: Google docstrings don't allow > 1 parameter "
+                      "per description")
+            p = "{0}".format(", ".join(param.names))
             if param.types:
                 types = param.types.strip()
                 if len(types):
@@ -288,43 +303,53 @@ class NumpySection(NapoleonSection):
     indent = "    "
 
     @staticmethod
-    def finalize_param(s):
+    def finalize_param(s, i):
         """
         Args:
             s (type): Description
         """
         m = re.match(r"(.*?)\s*(?::\s*(.*?))?\s*?\n(.*)", s, re.DOTALL)
         name, typ, desc = m.groups()
+        # FIXME hack, name for numpy parameters is always a list of names
+        # to support the multiple parameters per description option in
+        # numpy docstrings
+        name = [n.strip() for n in name.split(',')]
         desc = dedent_docstr(desc, 0)
-        return Parameter(name, typ, desc)
+        return Parameter(name, typ, desc, i)
 
     def param_parser(self, text):
         """"""
         # NOTE: there will be some tricky business if there is a
         # section break done by "resuming unindented text"
-        params = OrderedDict()
+        param_list = []
+        param_dict = OrderedDict()
         text = dedent_docstr(text, 0)
         s = ""
         for line in text.splitlines():
             if line and line[0] not in string.whitespace:
                 if s:
-                    param = self.finalize_param(s)
-                    params[param.name] = param
+                    param = self.finalize_param(s, len(param_list))
+                    param_list.append(param)
+                    for name in param.names:
+                        param_dict[name] = param
                 s = (line + "\n")
             else:
                 s += (line + "\n")
         if s:
-            param = self.finalize_param(s)
-            params[param.name] = param
-        return params
+            param = self.finalize_param(s, len(param_list))
+            param_list.append(param)
+            for name in param.names:
+                param_dict[name] = param
+        return param_dict
 
     def param_formatter(self):
         """"""
         # NOTE: there will be some tricky business if there is a
         # section break done by "resuming unindented text"
         s = ""
-        for name, param in self.args.items():
-            p = "{0}".format(name)
+        already_seen = {}
+        for param in self.args.values():
+            p = "{0}".format(", ".join(param.names))
             if param.types:
                 types = param.types.strip()
                 if len(types):
@@ -461,26 +486,48 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         elif not self.section_exists("Parameters"):
             self.finalize_section(self.PREFERRED_PARAMS_ALIAS, "")
 
-        current = self.sections["Parameters"].args
+        current_dict = self.sections["Parameters"].args
+        # print("current::", current)
 
-        # FIXME: numpy docstrings can put > 1 parameter on a line if they
-        # have the same type / description... this approach does not support
-        # that behavior
+        # go through params in the order of the function declaration
+        # and cherry-pick from current_dict if there's already a description
+        # for that parameter
+        tags_seen = dict()
         new = OrderedDict()
         for name, param in params.items():
-            new[name] = current.pop(name, param)
+            if name in current_dict:
+                param = current_dict.pop(name)
+                if param.tag in tags_seen:
+                    param = None
+                else:
+                    tags_seen[param.tag] = True
+            if param:
+                new[name] = param
 
-        if len(current):
-            print("Warning, killing parameters named:", list(current.keys()))
+        # go through params that are no linger in the arguments list and
+        # move them from the Parameters section of the docstring to the
+        # deleted parameters section
+        if len(current_dict):
+            print("Warning, killing parameters named:",
+                  list(current_dict.keys()))
             # TODO: put a switch here for other bahavior?
             if not self.section_exists("Deleted Parameters"):
                 self.finalize_section("Deleted Parameters", "")
+
             deled_params = self.sections["Deleted Parameters"]
-            for key, val in current.items():
+            deleted_tags = dict()
+            for key, val in current_dict.items():
                 if key in deled_params.args:
-                    print("Stronger Warning: Killing old deleted param: '{0}'"
-                          "".format(key))
-                deled_params.args[key] = val
+                    print("Stronger Warning: Killing old deleted param: "
+                          "'{0}'".format(key))
+
+                val.names.remove(key)
+                if val.tag in deleted_tags:
+                    deleted_tags[val.tag].names.append(key)
+                else:
+                    new_val = Parameter([key], val.types, val.description)
+                    deleted_tags[val.tag] = new_val
+                    deled_params.args[key] = new_val
 
         if len(new) == 0:
             self.sections["Parameters"] = None
