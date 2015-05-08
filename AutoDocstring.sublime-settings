@@ -1,4 +1,5 @@
 {
   "style": "auto_google",
-  "template_order": false
+  "template_order": false,
+  "optional_tag": "optional"
 }

@@ -334,7 +334,8 @@ def get_desired_style(view, default="google"):
         return docstring_styles.STYLE_LOOKUP[style]
 
 def parse_function_params(s, default_type="TYPE",
-                          default_description="Description"):
+                          default_description="Description",
+                          optional_tag="optional"):
     """Parse function parameters into an OrderedDict of Parameters
 
     Args:
@@ -342,6 +343,8 @@ def parse_function_params(s, default_type="TYPE",
             declaration
         default_type (str, optional): default type text
         default_description (str): default text
+        optional_tag (str): tag included with type for kwargs when
+            they are created
 
     Returns:
         OrderedDict containing Parameter instances
@@ -407,9 +410,10 @@ def parse_function_params(s, default_type="TYPE",
         else:
             paramtype = default_class_name.lower()
         if kwargs_begin <= i and i < kwargs_end:
-            paramtype += ", optional"
-        param = docstring_styles.Parameter(name, paramtype,
-                                           default_description)
+            if optional_tag:
+                paramtype += ", {0}".format(optional_tag)
+        param = docstring_styles.Parameter([name], paramtype,
+                                           default_description, tag=i)
         params[name] = param
 
     return params
@@ -438,6 +442,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     old_docstr = view.substr(old_docstr_region)
     settings = sublime.load_settings(_SETTINGS_FNAME)
     template_order = settings.get("template_order", False)
+    optional_tag = settings.get("optional_tag", "optional")
     ds = docstring_styles.make_docstring_obj(old_docstr, desired_style,
                                              template_order=template_order)
 
@@ -446,7 +451,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
         decl_str = view.substr(target)
         typ, name, args = re.match(_simple_decl_re, decl_str).groups()  # pylint: disable=unused-variable
         if typ == "def":
-            params = parse_function_params(args)
+            params = parse_function_params(args, optional_tag=optional_tag)
             ds.update_parameters(params)
 
     if is_new:

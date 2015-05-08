@@ -2,6 +2,8 @@
 
 ## master branch
 
+  - add `optional_tag` setting so users can keep ", optional" from showing up by default
+
 ## 0.2.5
   Features:
     - add template Returns with new docstrings
