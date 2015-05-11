@@ -418,6 +418,34 @@ def parse_function_params(s, default_type="TYPE",
 
     return params
 
+def parse_class_attributes(s, default_type="TYPE",
+                           default_description="Description"):
+    """Scan a class' code and look for attributes
+
+    Args:
+        s (str): everything in the parenthesis of a function
+            declaration
+        default_type (str, optional): default type text
+        default_description (str): default text
+
+    Returns:
+        OrderedDict containing Parameter instances
+    """
+    attribs = OrderedDict()
+
+    # TODO: find the end of the class knowing that comments and multiline
+    #       strings could exist and a lower indentation level not break up
+    #       the class
+
+    # TODO: scan for 'self.([A-Za-z0-9_]+)\s*='
+
+    # TODO: use literal_eval to try to discover data types
+
+    # TODO: scan for \s*@property\n(\s*@.*?\n)*\n\s*def and add them
+    #       to attribs without any type
+
+    return attribs
+
 def autodoc(view, edit, region, all_defs, desired_style, file_type):
     """actually do the business of auto-documenting
 
@@ -453,6 +481,9 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
         if typ == "def":
             params = parse_function_params(args, optional_tag=optional_tag)
             ds.update_parameters(params)
+        elif typ == "class":
+            attribs = parse_class_attributes(args)
+            ds.update_attributes(attribs)
 
     if is_new:
         ds.finalize_section("Summary", "Summary")
