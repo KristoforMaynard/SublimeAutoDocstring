@@ -457,7 +457,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     if is_new:
         ds.finalize_section("Summary", "Summary")
 
-    if is_new:
+    if is_new and not _module_flag and typ == "def" and name != "__init__":
         ds.add_dummy_returns("TYPE", "Description")
 
     # -> create new docstring from meta
