@@ -2,8 +2,11 @@
 
 ## master branch
 
+## 0.2.6
+
   - add `optional_tag` setting so users can keep ", optional" from showing up by default
   - support multiple parameters with the same description for numpy style
+  - stop Returns sections from being automatically added to classes and __init__ methods
 
 ## 0.2.5
   Features:
