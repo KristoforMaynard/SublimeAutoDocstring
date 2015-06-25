@@ -1,5 +1,6 @@
 {
   "style": "auto_google",
   "template_order": false,
-  "optional_tag": "optional"
+  "optional_tag": "optional",
+  "use_snippet": false
 }

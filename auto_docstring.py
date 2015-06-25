@@ -352,6 +352,10 @@ def parse_function_params(s, default_type="TYPE",
     # Note: this use of ast Nodes seems to work for python2.6 - python3.4,
     # but there is no guarentee that it'll continue to work in future versions
 
+    # precondition default type / description for snippet use
+    default_type = r"${{NUMBER:{0}}}".format(default_type)
+    default_description = r"${{NUMBER:{0}}}".format(default_description)
+
     # pretend the args go to a lambda func, then get an ast for the lambda
     s = s.replace("\r\n", "")
     s = s.replace("\n", "")
@@ -436,13 +440,15 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     _module_flag = (target.a == target.b == 0)
     # print("-> found target", target, _module_flag)
 
-    _, old_docstr_region, _, is_new = get_docstring(view, edit, target)
+    old_ds_info = get_docstring(view, edit, target)
+    old_ds_whole_region, old_ds_region, quote_style, is_new = old_ds_info
 
     # TODO: parse existing docstring into meta data
-    old_docstr = view.substr(old_docstr_region)
+    old_docstr = view.substr(old_ds_region)
     settings = sublime.load_settings(_SETTINGS_FNAME)
     template_order = settings.get("template_order", False)
     optional_tag = settings.get("optional_tag", "optional")
+    use_snippet = settings.get("use_snippet", False)
     ds = docstring_styles.make_docstring_obj(old_docstr, desired_style,
                                              template_order=template_order)
 
@@ -455,19 +461,46 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
             ds.update_parameters(params)
 
     if is_new:
-        ds.finalize_section("Summary", "Summary")
+        ds.finalize_section("Summary", r"${NUMBER:Summary}")
 
     if is_new and not _module_flag and typ == "def" and name != "__init__":
-        ds.add_dummy_returns("TYPE", "Description")
+        ds.add_dummy_returns(r"${NUMBER:TYPE}", r"${NUMBER:Description}")
 
     # -> create new docstring from meta
     new_ds = desired_style(ds)
 
     # -> replace old docstring with the new docstring
-    _, body_indent_txt, _ = get_indentation(view, target, _module_flag)
-    new_docstr = new_ds.format(body_indent_txt)
-    view.replace(edit, old_docstr_region, new_docstr)
+    if use_snippet:
+        body_indent_txt = ""
+    else:
+        _, body_indent_txt, _ = get_indentation(view, target, _module_flag)
 
+    new_docstr = new_ds.format(body_indent_txt)
+
+    # replace ${NUMBER:.*} with ${[0-9]+:.*}
+    i = 1
+    _nstr = r"${NUMBER:"
+    while new_docstr.find(_nstr) > -1:
+        if use_snippet:
+            # for snippets
+            new_docstr = new_docstr.replace(_nstr, r"${{{0}:".format(i), 1)
+        else:
+            # remove snippet markers
+            loc = new_docstr.find(_nstr)
+            new_docstr = new_docstr.replace(_nstr, "", 1)
+            b_loc = new_docstr.find(r"}", loc)
+            new_docstr = new_docstr[:b_loc] + new_docstr[b_loc + 1:]
+        i += 1
+
+    # actually insert the new docstring
+    if use_snippet:
+        view.replace(edit, old_ds_whole_region, "")
+        view.sel().clear()
+        view.sel().add(sublime.Region(old_ds_whole_region.a))
+        new_docstr = quote_style + new_docstr + quote_style
+        view.run_command('insert_snippet', {'contents': new_docstr})
+    else:
+        view.replace(edit, old_ds_region, new_docstr)
 
 class AutoDocstringCommand(sublime_plugin.TextCommand):
     def run(self, edit):
