@@ -24,7 +24,7 @@ Settings
   - `template_order` (boolean): If true, then reorder section to the same order that they appear in the style's template. If false, section order of existings docstrings is preserved. Default is false.
   - `optional_tag` (string): text to add to the type of keyword arguments. Supplying an empty string won't add anything special to new keyword arguments.
   - `use_snippet` (boolean): If true, then insert a snippet so that you can
-  tab through newly inserted fields (Summary / types / desciptions). Default
+  tab through newly inserted fields (Summary / Types / Desciptions). Default
   is false, but should become true in the future, when this feature is more
   fully tested.
 
