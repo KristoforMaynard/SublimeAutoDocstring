@@ -392,8 +392,7 @@ def parse_function_params(s, default_type="TYPE",
     # Note: this use of ast Nodes seems to work for python2.6 - python3.4,
     # but there is no guarentee that it'll continue to work in future versions
 
-    # precondition default type / description for snippet use
-    default_type = r"${{NUMBER:{0}}}".format(default_type)
+    # precondition default description for snippet use
     default_description = r"${{NUMBER:{0}}}".format(default_description)
 
     # pretend the args go to a lambda func, then get an ast for the lambda
@@ -434,25 +433,27 @@ def parse_function_params(s, default_type="TYPE",
     # now fill a params dict
     params = OrderedDict()
     for i, name, default in zip(count(), arg_ids, defaults):
-        default_class_name = default.__class__.__name__
         if default is None:
             paramtype = None
         elif default == default_type:
             paramtype = default
-        elif default_class_name == "NameConstant":
-            if default.value is None:
-                paramtype = default_type
-            else:
-                paramtype = default.value.__class__.__name__
-        elif default_class_name == "Name":
-            if default.id in ["True", "False"]:
-                paramtype = "bool"
-            else:
-                paramtype = default_type
-        elif default_class_name == "Num":
-            paramtype = default.n.__class__.__name__
         else:
-            paramtype = default_class_name.lower()
+            fld0 = getattr(default, default._fields[0])
+            if default._fields[0] in ['keys', 'elts']:
+                paramtype = default.__class__.__name__.lower()
+            elif fld0 in ["True", "False"]:
+                paramtype = "bool"
+            elif fld0 == "None":
+                paramtype = default_type
+            else:
+                paramtype = fld0.__class__.__name__
+
+            if paramtype == None.__class__.__name__:
+                paramtype = default_type
+
+        if paramtype is not None:
+            paramtype = r"${{NUMBER:{0}}}".format(paramtype)
+
         if kwargs_begin <= i and i < kwargs_end:
             if optional_tag:
                 paramtype += ", {0}".format(optional_tag)
@@ -478,26 +479,17 @@ def get_attr_type(value, default_type, existing_type):
     Returns:
         str: string describing the type of the attribute
     """
-    if existing_type != default_type:
+    snippet_default = r"${{NUMBER:{0}}}".format(default_type)
+    if existing_type not in [default_type, snippet_default]:
         return existing_type
 
     value = value.strip()
     try:
-        v = ast.parse(value).body[0].value
-        class_name = v.__class__.__name__
-        if class_name == "NameConstant":
-            ret = v.value.__class__.__name__
-            if ret == None.__class__.__name__:
-                ret = default_type
-        elif class_name == "Name":
-            if v.id in ["True", "False"]:
-                ret = "bool"
-            else:
-                ret = default_type
-        elif class_name == "Num":
-            ret = v.n.__class__.__name__
-        else:
-            ret = class_name.lower()
+        ret = ast.literal_eval(value).__class__.__name__
+        if ret == None.__class__.__name__:
+            ret = default_type
+    except ValueError:
+        ret = default_type
     except SyntaxError:
         ret = default_type
 
@@ -516,8 +508,7 @@ def parse_class_attributes(view, target, default_type="TYPE",
     Returns:
         OrderedDict containing Parameter instances
     """
-    # precondition default type / description for snippet use
-    default_type = r"${{NUMBER:{0}}}".format(default_type)
+    # precondition description for snippet use
     default_description = r"${{NUMBER:{0}}}".format(default_description)
 
     attribs = OrderedDict()
@@ -575,6 +566,10 @@ def parse_class_attributes(view, target, default_type="TYPE",
                     tag = attribs[name].tag
                 else:
                     tag = len(attribs)
+
+                if not paramtype.startswith(r"${NUMBER:"):
+                    paramtype = r"${{NUMBER:{0}}}".format(paramtype)
+
                 param = docstring_styles.Parameter([name], paramtype,
                                                    default_description,
                                                    tag=tag)
@@ -595,8 +590,7 @@ def parse_module_attributes(view, default_type="TYPE",
     Returns:
         OrderedDict containing Parameter instances
     """
-    # precondition default type / description for snippet use
-    default_type = r"${{NUMBER:{0}}}".format(default_type)
+    # precondition description for snippet use
     default_description = r"${{NUMBER:{0}}}".format(default_description)
 
     attribs = OrderedDict()
@@ -609,7 +603,7 @@ def parse_module_attributes(view, default_type="TYPE",
 
         # discover data type from declaration
         if name in attribs:
-            existing_type = attribs[name].type
+            existing_type = attribs[name].types
         else:
             existing_type = default_type
         value = view.substr(view.line(attr_reg.a)).split('=')[1]
@@ -619,6 +613,9 @@ def parse_module_attributes(view, default_type="TYPE",
             tag = attribs[name].tag
         else:
             tag = len(attribs)
+
+        if not paramtype.startswith(r"${NUMBER:"):
+            paramtype = r"${{NUMBER:{0}}}".format(paramtype)
         param = docstring_styles.Parameter([name], paramtype,
                                            default_description,
                                            tag=tag)
