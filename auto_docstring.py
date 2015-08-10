@@ -458,6 +458,47 @@ def parse_function_params(s, default_type="TYPE",
 
     return params
 
+def get_attr_type(value, default_type, existing_type):
+    """Try to figure out type of attribute from declaration
+
+    if existing_type != default_type, then existing_type is returned
+    regardless of what's in this declaration
+
+    Args:
+        value (str): the right hand side of the equal sign
+        default_type (str): default text for the type
+        existing_type (str): if attr was already set, what was the
+            type? Should equal defualt_type if the attr was not
+            previously set
+
+    Returns:
+        str: string describing the type of the attribute
+    """
+    if existing_type != default_type:
+        return existing_type
+
+    value = value.strip()
+    try:
+        v = ast.parse(value).body[0].value
+        class_name = v.__class__.__name__
+        if class_name == "NameConstant":
+            ret = v.value.__class__.__name__
+            if ret == None.__class__.__name__:
+                ret = default_type
+        elif class_name == "Name":
+            if v.id in ["True", "False"]:
+                ret = "bool"
+            else:
+                ret = default_type
+        elif class_name == "Num":
+            ret = v.n.__class__.__name__
+        else:
+            ret = class_name.lower()
+    except SyntaxError:
+        ret = default_type
+
+    return ret
+
 def parse_class_attributes(view, target, default_type="TYPE",
                            default_description="Description"):
     """Scan a class' code and look for attributes
@@ -518,10 +559,14 @@ def parse_class_attributes(view, target, default_type="TYPE",
                 if name.startswith('_'):
                     continue
 
-                # TODO: use literal_eval to try to discover data type? remember
-                # to check if it's already in attribs with a datatype
+                # discover data type from declaration
+                if name in attribs:
+                    existing_type = attribs[name].type
+                else:
+                    existing_type = default_type
+                value = view.substr(view.line(attr_reg.a)).split('=')[1]
+                paramtype = get_attr_type(value, default_type, existing_type)
 
-                paramtype = default_type
                 if name in attribs:
                     tag = attribs[name].tag
                 else:
@@ -558,9 +603,14 @@ def parse_module_attributes(view, default_type="TYPE",
         if name.startswith('_'):
             continue
 
-        # TODO: use literal_eval to try to discover data type? remember
-        # to check if it's already in attribs with a datatype
-        paramtype = default_type
+        # discover data type from declaration
+        if name in attribs:
+            existing_type = attribs[name].type
+        else:
+            existing_type = default_type
+        value = view.substr(view.line(attr_reg.a)).split('=')[1]
+        paramtype = get_attr_type(value, default_type, existing_type)
+
         if name in attribs:
             tag = attribs[name].tag
         else:
