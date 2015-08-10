@@ -280,7 +280,7 @@ class GoogleSection(NapoleonSection):
         s = "\n".join(lines)
         return s
 
-    def returns_parser(self, text):
+    def returns_parser(self, text):  # pylint: disable=no-self-use
         """
         Args:
             text (type): Description
@@ -362,7 +362,7 @@ class NumpySection(NapoleonSection):
         # NOTE: there will be some tricky business if there is a
         # section break done by "resuming unindented text"
         s = ""
-        already_seen = {}
+        # already_seen = {}
         for param in self.args.values():
             p = "{0}".format(", ".join(param.names))
             if param.types:
@@ -379,7 +379,7 @@ class NumpySection(NapoleonSection):
             s += p
         return s
 
-    def returns_parser(self, text):
+    def returns_parser(self, text):  # pylint: disable=no-self-use
         """"""
         return text
 

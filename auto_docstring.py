@@ -177,7 +177,8 @@ def get_docstring(view, edit, target):
         cnt = -1
         while True:
             line = view.substr(view.line(cnt + 1))
-            if line.startswith("#!") or line.startswith("# -*-"):
+            if (line.startswith("#!") or line.startswith("# -*-") or
+                line.startswith("# pylint:")):  # pylint: disable=bad-continuation
                 cnt += 1
             else:
                 break
