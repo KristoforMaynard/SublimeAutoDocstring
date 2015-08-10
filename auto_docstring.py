@@ -565,7 +565,7 @@ def parse_class_attributes(view, target, default_type="TYPE",
 
                 # discover data type from declaration
                 if name in attribs:
-                    existing_type = attribs[name].type
+                    existing_type = attribs[name].types
                 else:
                     existing_type = default_type
                 value = view.substr(view.line(attr_reg.a)).split('=')[1]
