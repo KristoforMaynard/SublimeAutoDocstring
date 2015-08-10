@@ -6,5 +6,5 @@
   "optional_tag": "optional",
   "style": "auto_google",
   "template_order": false,
-  "use_snippet": false,
+  "use_snippet": true,
 }

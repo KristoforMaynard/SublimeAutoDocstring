@@ -31,5 +31,4 @@ Settings
   - `template_order` (boolean): If true, then reorder section to the same order that they appear in the style's template. If false, section order of existings docstrings is preserved. Default is false.
   - `use_snippet` (boolean): If true, then insert a snippet so that you can
   tab through newly inserted fields (Summary / Types / Desciptions). Default
-  is false, but should become true in the future, when this feature is more
-  fully tested.
+  is true.
