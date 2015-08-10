@@ -564,6 +564,10 @@ def parse_function_exceptions(view, target, default_description="Description"):
     e_regions = find_all_in_region(view, whole_function,
                                    r"^[^\S\n]*raise[^\S\n]+([^\s\(]+)")
     for e in e_regions:
+        scope_name = view.scope_name(e.a)
+        if "string" in scope_name or "comment" in scope_name:
+            continue
+
         e_name = view.substr(e).strip()[len("raise"):].strip()
         if not e_name in excepts:
             excepts[e_name] = docstring_styles.Parameter([e_name], None,
@@ -634,9 +638,12 @@ def parse_class_attributes(view, target, default_type="TYPE",
 
     for attr_reg in all_attr_regions:
         name = view.substr(attr_reg).split('=')[0].strip()
+        scope_name = view.scope_name(attr_reg.a)
         if name.startswith('self.'):
             name = name[len('self.'):]
         if name.startswith('_'):
+            continue
+        if "string" in scope_name or "comment" in scope_name:
             continue
 
         # discover data type from declaration
@@ -683,7 +690,11 @@ def parse_module_attributes(view, default_type="TYPE",
     all_attr_regions = view.find_all(r"^([A-Za-z0-9_]+)\s*=")
     for attr_reg in all_attr_regions:
         name = view.substr(attr_reg).split('=')[0].strip()
+        scope_name = view.scope_name(attr_reg.a)
+
         if name.startswith('_'):
+            continue
+        if "string" in scope_name or "comment" in scope_name:
             continue
 
         # discover data type from declaration
