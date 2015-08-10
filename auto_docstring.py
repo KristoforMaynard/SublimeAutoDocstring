@@ -267,6 +267,46 @@ def get_docstring(view, edit, target):
 
     return whole_region, docstr_region, style, new
 
+def get_class_region(view, target):
+    """Find a region of all the lines that make up a class
+
+    Args:
+        view (View): current view
+        target (Region): region of the declaration of interest
+
+    Returns:
+        sublime.Region: all lines in the class
+    """
+    first_line = view.substr(view.line(target.a))
+    leading_wspace = first_line[:len(first_line) - len(first_line.lstrip())]
+
+    eoclass_row = None
+
+    first_row = view.rowcol(target.a)[0]
+    eof_row = view.rowcol(view.size())[0]
+    for i in range(first_row + 1, eof_row + 1):
+        line_tp0 = view.text_point(i, 0)
+        line = view.substr(view.line(line_tp0)).rstrip()
+        tp0_scope = view.scope_name(line_tp0)
+
+        if not line or "comment" in tp0_scope or "string" in tp0_scope:
+            continue
+
+        if not (line.startswith(leading_wspace) and
+                line[len(leading_wspace)] in r" \t"):
+            eoclass_row = i - 1
+            break
+
+    if eoclass_row is None:
+        if "string" in view.scope_name(view.text_point(eof_row, 0)):
+            raise RuntimeError("unclosed string literal in file")
+        else:
+            eoclass_row = eof_row
+
+    class_region = sublime.Region(view.line(target.a).a,
+                                  view.text_point(eoclass_row + 1, 0))
+    return class_region
+
 def is_python_file(view):
     """Check if view is a python file
 
@@ -422,6 +462,170 @@ def parse_function_params(s, default_type="TYPE",
 
     return params
 
+def get_attr_type(value, default_type, existing_type):
+    """Try to figure out type of attribute from declaration
+
+    if existing_type != default_type, then existing_type is returned
+    regardless of what's in this declaration
+
+    Args:
+        value (str): the right hand side of the equal sign
+        default_type (str): default text for the type
+        existing_type (str): if attr was already set, what was the
+            type? Should equal defualt_type if the attr was not
+            previously set
+
+    Returns:
+        str: string describing the type of the attribute
+    """
+    if existing_type != default_type:
+        return existing_type
+
+    value = value.strip()
+    try:
+        v = ast.parse(value).body[0].value
+        class_name = v.__class__.__name__
+        if class_name == "NameConstant":
+            ret = v.value.__class__.__name__
+            if ret == None.__class__.__name__:
+                ret = default_type
+        elif class_name == "Name":
+            if v.id in ["True", "False"]:
+                ret = "bool"
+            else:
+                ret = default_type
+        elif class_name == "Num":
+            ret = v.n.__class__.__name__
+        else:
+            ret = class_name.lower()
+    except SyntaxError:
+        ret = default_type
+
+    return ret
+
+def parse_class_attributes(view, target, default_type="TYPE",
+                           default_description="Description"):
+    """Scan a class' code and look for attributes
+
+    Args:
+        view (View): current view
+        target (Region): region of the declaration of interest
+        default_type (str): default type text
+        default_description (str): default text
+
+    Returns:
+        OrderedDict containing Parameter instances
+    """
+    # precondition default type / description for snippet use
+    default_type = r"${{NUMBER:{0}}}".format(default_type)
+    default_description = r"${{NUMBER:{0}}}".format(default_description)
+
+    attribs = OrderedDict()
+
+    # -> find region containing the entire class
+    class_region = get_class_region(view, target)
+
+    # -> trim out class definitions that occur inside class_region
+    row0 = view.rowcol(target.a)[0]
+    p0 = view.text_point(row0 + 1, 0)
+    blacklist = []
+
+    while True:
+        reg = view.find(r"^[^\S\n]*class\s*[A-Za-z0-9_]+\s*"
+                        r"\([A-Za-z0-9_,\s]*\)\s*:", p0)
+        if reg.b == -1 or reg.a >= class_region.b:
+            break
+        else:
+            bl_region = get_class_region(view, reg)
+            blacklist.append(bl_region)
+            p0 = bl_region.b
+
+    _, body_indent_txt, _ = get_indentation(view, target, module_decl=False)
+    attr_re = (r"(^{0}([A-Za-z0-9_]+)|"
+               r"^[^\S\n]*self.([A-Za-z0-9_]+))\s*=".format(body_indent_txt))
+    p0 = view.text_point(row0 + 1, 0)
+    while True:
+        attr_reg = view.find(attr_re, p0)
+        if attr_reg.b == -1 or attr_reg.a >= class_region.b:
+            break
+        else:
+            valid_attr = True
+            for bl_reg in blacklist:
+                if bl_reg.contains(attr_reg):
+                    valid_attr = False
+                    break
+
+            p0 = attr_reg.b
+            if valid_attr:
+                name = view.substr(attr_reg).split('=')[0].strip()
+                if name.startswith('self.'):
+                    name = name[len('self.'):]
+                if name.startswith('_'):
+                    continue
+
+                # discover data type from declaration
+                if name in attribs:
+                    existing_type = attribs[name].type
+                else:
+                    existing_type = default_type
+                value = view.substr(view.line(attr_reg.a)).split('=')[1]
+                paramtype = get_attr_type(value, default_type, existing_type)
+
+                if name in attribs:
+                    tag = attribs[name].tag
+                else:
+                    tag = len(attribs)
+                param = docstring_styles.Parameter([name], paramtype,
+                                                   default_description,
+                                                   tag=tag)
+                attribs[name] = param
+
+    return attribs
+
+def parse_module_attributes(view, default_type="TYPE",
+                            default_description="Description"):
+    """Scan a module's code and look for attributes
+
+    Args:
+        view (View): current view
+        target (Region): region of the declaration of interest
+        default_type (str): default type text
+        default_description (str): default text
+
+    Returns:
+        OrderedDict containing Parameter instances
+    """
+    # precondition default type / description for snippet use
+    default_type = r"${{NUMBER:{0}}}".format(default_type)
+    default_description = r"${{NUMBER:{0}}}".format(default_description)
+
+    attribs = OrderedDict()
+
+    all_attr_regions = view.find_all(r"^([A-Za-z0-9_]+)\s*=")
+    for attr_reg in all_attr_regions:
+        name = view.substr(attr_reg).split('=')[0].strip()
+        if name.startswith('_'):
+            continue
+
+        # discover data type from declaration
+        if name in attribs:
+            existing_type = attribs[name].type
+        else:
+            existing_type = default_type
+        value = view.substr(view.line(attr_reg.a)).split('=')[1]
+        paramtype = get_attr_type(value, default_type, existing_type)
+
+        if name in attribs:
+            tag = attribs[name].tag
+        else:
+            tag = len(attribs)
+        param = docstring_styles.Parameter([name], paramtype,
+                                           default_description,
+                                           tag=tag)
+        attribs[name] = param
+
+    return attribs
+
 def autodoc(view, edit, region, all_defs, desired_style, file_type):
     """actually do the business of auto-documenting
 
@@ -453,12 +657,18 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
                                              template_order=template_order)
 
     # get declaration info
-    if not _module_flag:
+    if _module_flag:
+        attribs = parse_module_attributes(view)
+        ds.update_attributes(attribs)
+    else:
         decl_str = view.substr(target)
         typ, name, args = re.match(_simple_decl_re, decl_str).groups()  # pylint: disable=unused-variable
         if typ == "def":
             params = parse_function_params(args, optional_tag=optional_tag)
             ds.update_parameters(params)
+        elif typ == "class":
+            attribs = parse_class_attributes(view, target)
+            ds.update_attributes(attribs)
 
     if is_new:
         ds.finalize_section("Summary", r"${NUMBER:Summary}")

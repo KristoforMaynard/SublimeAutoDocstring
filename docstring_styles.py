@@ -203,6 +203,8 @@ class NapoleonSection(Section):
     """"""
     ALIASES = {"Args": "Parameters",
                "Arguments": "Parameters",
+               "Deleted Args": "Deleted Parameters",
+               "Deleted Arguments": "Deleted Parameters",
                "Keyword Args": "Keyword Arguments",
                "Return": "Returns",
                "Warnings": "Warning"
@@ -265,9 +267,11 @@ class GoogleSection(NapoleonSection):
             p = "{0}".format(", ".join(param.names))
             if param.types:
                 types = param.types.strip()
-                if len(types):
+                if types:
                     p += " ({0})".format(types)
-            p += ": {0}\n".format(param.description.rstrip())
+            if param.description:
+                p += ": {0}".format(param.description.rstrip())
+            p += '\n'
             s += p
 
         lines = [self.first_indent + line for line in s.splitlines()]
@@ -293,8 +297,13 @@ class GoogleSection(NapoleonSection):
                                       param_formatter),
                "Keyword Arguments": (param_parser,
                                      param_formatter),
+               "Attributes": (param_parser,
+                              param_formatter),
+               "Deleted Attributes": (param_parser,
+                                      param_formatter),
                "Returns": (returns_parser,
-                           returns_formatter)}
+                           returns_formatter),
+              }
 
 
 class NumpySection(NapoleonSection):
@@ -352,14 +361,15 @@ class NumpySection(NapoleonSection):
             p = "{0}".format(", ".join(param.names))
             if param.types:
                 types = param.types.strip()
-                if len(types):
+                if types:
                     p += " : {0}".format(types)
             p += "\n"
-            desc = param.description.rstrip()
-            lines = [self.first_indent + line for line in desc.splitlines()]
-            if len(lines) == 0 or not lines[-1].strip() == "":
-                lines.append("")
-            p += "\n".join(lines)
+            if param.description:
+                desc = param.description.rstrip()
+                lines = [self.first_indent + line for line in desc.splitlines()]
+                if len(lines) == 0 or not lines[-1].strip() == "":
+                    lines.append("")
+                p += "\n".join(lines)
             s += p
         return s
 
@@ -379,8 +389,13 @@ class NumpySection(NapoleonSection):
                                       param_formatter),
                "Keyword Arguments": (param_parser,
                                      param_formatter),
+               "Attributes": (param_parser,
+                              param_formatter),
+               "Deleted Attributes": (param_parser,
+                                      param_formatter),
                "Returns": (returns_parser,
-                           returns_formatter)}
+                           returns_formatter),
+              }
 
 
 class Docstring(object):
@@ -464,6 +479,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                             ("Other Parameters", None),
                             ("Deleted Parameters", None),
                             ("Attributes", None),
+                            ("Deleted Attributes", None),
                             ("Methods", None),
                             ("Raises", None),
                             ("Warns", None),
@@ -476,17 +492,34 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                             ("Examples", None),
                            ])
 
-    def update_parameters(self, params):
-        """
-        Args:
-            params (OrderedDict): params objects keyed by their names
-        """
-        if not self.section_exists("Parameters") and len(params) == 0:
-            return None
-        elif not self.section_exists("Parameters"):
-            self.finalize_section(self.PREFERRED_PARAMS_ALIAS, "")
+    def _update_section(self, params, sec_name, sec_alias=None,
+                        del_prefix="Deleted ", alpha_order=False):
+        """Update section to add / remove params
 
-        current_dict = self.sections["Parameters"].args
+        As a failsafe, params that are removed are placed in a
+        "Deleted ..." section
+
+        Args:
+            params (OrderedDict): dict of Parameter objects
+            sec_name (str): generic section name
+            sec_alias (str): section name that appears in teh docstring
+            del_prefix (str): prefix for section that holds params that
+                no longer exist.
+            alpha_order (str): if 'all', everything is sorted
+                alphabetically, if 'new', only new params are
+                sorted. If false, param order is the same as they
+                appear in the OrderedDict, NOT YET IMPLEMENTED
+        """
+        # TODO: implement alphabetical order
+        if not sec_alias:
+            sec_alias = sec_name
+
+        if not self.section_exists(sec_name) and len(params) == 0:
+            return None
+        elif not self.section_exists(sec_name):
+            self.finalize_section(sec_alias, "")
+
+        current_dict = self.sections[sec_name].args
         # print("current::", current)
 
         # go through params in the order of the function declaration
@@ -508,13 +541,14 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         # move them from the Parameters section of the docstring to the
         # deleted parameters section
         if len(current_dict):
+            del_sec_name = del_prefix + sec_alias
             print("Warning, killing parameters named:",
                   list(current_dict.keys()))
             # TODO: put a switch here for other bahavior?
-            if not self.section_exists("Deleted Parameters"):
-                self.finalize_section("Deleted Parameters", "")
+            if not self.section_exists(del_sec_name):
+                self.finalize_section(del_sec_name, "")
 
-            deled_params = self.sections["Deleted Parameters"]
+            deled_params = self.sections[self.SECTION_STYLE.resolve_alias(del_sec_name)]
             deleted_tags = dict()
             for key, val in current_dict.items():
                 if key in deled_params.args:
@@ -530,10 +564,23 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                     deled_params.args[key] = new_val
 
         if len(new) == 0:
-            self.sections["Parameters"] = None
+            self.sections[sec_name] = None
         else:
-            self.sections["Parameters"].args = new
+            self.sections[sec_name].args = new
 
+    def update_parameters(self, params):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+        self._update_section(params, "Parameters", self.PREFERRED_PARAMS_ALIAS)
+
+    def update_attributes(self, attribs, alpha_order="new"):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+        self._update_section(attribs, "Attributes", alpha_order=alpha_order)
 
 class GoogleDocstring(NapoleonDocstring):
     """"""

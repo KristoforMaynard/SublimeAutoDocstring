@@ -8,6 +8,7 @@ Features
 --------
 
   - Inspects function definitions and inserts a stub for each parameter
+  - Inspects class / module attributes and inserts a stub for each
   - Rearranges parameters to reflect their order in the function definition
   - Automatically detects style: Google, Numpy
 
@@ -27,8 +28,3 @@ Settings
   tab through newly inserted fields (Summary / Types / Desciptions). Default
   is false, but should become true in the future, when this feature is more
   fully tested.
-
-Coming Eventually
------------------
-
-  - parse class attributes similar to function/method arguments
