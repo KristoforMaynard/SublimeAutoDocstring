@@ -1,7 +1,7 @@
 SublimeAutoDocstring
 ====================
 
-SublimeText plugin for inserting template docstrings in Python after analyzing
+SublimeText plugin for inserting / updating docstrings in Python after analyzing
 function parameters and the like.
 
 Features
@@ -19,8 +19,12 @@ Usage
   - <`cmd` + `alt` + `'`> will update a docstring for the first module/class/function preceding the cursor.
   - <`cmd` + `alt` + `shift` + `'`> will update docstrings for every class/method/function in the current file
 
+  Note that on linux / windows, `ctrl` is used in place of `cmd`.
+
 Settings
 --------
+
+  A shortcut to open the settings file is in menu under `Preferences/Package Settings/AutoDocstring/Settings - User`
 
   - `inspect_class_attributes`: add / remove class attributes to stay in sync with the code
   - `inspect_exceptions`: add / remove exceptions to stay in sync with the code
