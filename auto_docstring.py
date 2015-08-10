@@ -229,6 +229,14 @@ def get_docstring(view, edit, target):
         whole_region = sublime.Region(next_chars_reg.a, docstr_end.b)
         docstr_region = sublime.Region(next_chars_reg.b, docstr_end.a)
         new = False
+
+        # trim whitespace after docstring... having whitespace here seems
+        # to mess with indentation for some reason
+        if edit:
+            after_quote_reg = sublime.Region(whole_region.b,
+                                             view.line(whole_region.b).b)
+            if len(view.substr(whole_region.b).strip()) == 0:
+                view.replace(edit, after_quote_reg, "")
     elif edit is None:
         # no docstring exists, and don't make one
         return None, None, None, False
