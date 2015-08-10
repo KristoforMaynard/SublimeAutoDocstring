@@ -203,6 +203,8 @@ class NapoleonSection(Section):
     """"""
     ALIASES = {"Args": "Parameters",
                "Arguments": "Parameters",
+               "Deleted Args": "Deleted Parameters",
+               "Deleted Arguments": "Deleted Parameters",
                "Keyword Args": "Keyword Arguments",
                "Return": "Returns",
                "Warnings": "Warning"
@@ -297,6 +299,8 @@ class GoogleSection(NapoleonSection):
                                      param_formatter),
                "Attributes": (param_parser,
                               param_formatter),
+               "Deleted Attributes": (param_parser,
+                                      param_formatter),
                "Returns": (returns_parser,
                            returns_formatter),
               }
@@ -387,6 +391,8 @@ class NumpySection(NapoleonSection):
                                      param_formatter),
                "Attributes": (param_parser,
                               param_formatter),
+               "Deleted Attributes": (param_parser,
+                                      param_formatter),
                "Returns": (returns_parser,
                            returns_formatter),
               }
@@ -542,7 +548,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             if not self.section_exists(del_sec_name):
                 self.finalize_section(del_sec_name, "")
 
-            deled_params = self.sections[del_sec_name]
+            deled_params = self.sections[self.SECTION_STYLE.resolve_alias(del_sec_name)]
             deleted_tags = dict()
             for key, val in current_dict.items():
                 if key in deled_params.args:
