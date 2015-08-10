@@ -655,17 +655,20 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
 
     # get declaration info
     if _module_flag:
-        attribs = parse_module_attributes(view)
-        ds.update_attributes(attribs)
+        if settings.get("inspect_module_attributes", True):
+            attribs = parse_module_attributes(view)
+            ds.update_attributes(attribs)
     else:
         decl_str = view.substr(target)
         typ, name, args = re.match(_simple_decl_re, decl_str).groups()  # pylint: disable=unused-variable
         if typ == "def":
-            params = parse_function_params(args, optional_tag=optional_tag)
-            ds.update_parameters(params)
+            if settings.get("inspect_function_parameters", True):
+                params = parse_function_params(args, optional_tag=optional_tag)
+                ds.update_parameters(params)
         elif typ == "class":
-            attribs = parse_class_attributes(view, target)
-            ds.update_attributes(attribs)
+            if settings.get("inspect_class_attributes", True):
+                attribs = parse_class_attributes(view, target)
+                ds.update_attributes(attribs)
 
     if is_new:
         ds.finalize_section("Summary", r"${NUMBER:Summary}")

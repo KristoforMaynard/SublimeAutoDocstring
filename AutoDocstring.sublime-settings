@@ -1,6 +1,10 @@
 {
+  "inspect_class_attributes": true,
+  "inspect_exceptions": true,
+  "inspect_function_parameters": true,
+  "inspect_module_attributes": true,
+  "optional_tag": "optional",
   "style": "auto_google",
   "template_order": false,
-  "optional_tag": "optional",
-  "use_snippet": false
+  "use_snippet": false,
 }

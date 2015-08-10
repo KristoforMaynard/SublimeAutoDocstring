@@ -2,6 +2,9 @@
 
 ## master branch
 
+  - Inspects class / module attributes and inserts a stub for each
+  - add settings for suppressing autodetection
+
 ## 0.2.6
 
   - add `optional_tag` setting so users can keep ", optional" from showing up by default
