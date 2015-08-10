@@ -1,7 +1,7 @@
 # -*- coding: utf-8 -*-
 """Business end of the AutoDocstring plugin"""
 
-# TODO: parse declarations better
+# TODO: break this module up into smaller pieces
 # TODO: custom indentation on parameters
 # TODO: check other and kwargs on update_parameters
 # TODO: detect first_space used in the current docstring?
@@ -20,8 +20,13 @@ import sublime_plugin
 from . import docstring_styles
 
 _SETTINGS_FNAME = "AutoDocstring.sublime-settings"
-_simple_decl_re = r"^[^\S\n]*(def|class)\s+(\S+)\s*\(([\s\S]*?)\)\s*:"
 
+__class_re = r"(class)\s+([^\s\(\):]+)\s*(\(([\s\S]*?)\))?"
+__func_re = r"(def)\s+([^\s\(\):]+)\s*\(([\s\S]*?)\)"
+
+_all_decl_re = r"^[^\S\n]*({0}|{1})\s*:".format(__class_re, __func_re)
+_class_decl_re = r"^[^\S\n]*{0}\s*:".format(__class_re)
+_func_decl_re = r"^[^\S\n]*{0}\s*:".format(__func_re)
 
 def find_all_declarations(view, include_module=False):
     """Find all complete function/class declarations
@@ -35,7 +40,7 @@ def find_all_declarations(view, include_module=False):
         list: the ST regions of all the declarations, from
             'def'/'class' to the ':' inclusive.
     """
-    defs = view.find_all(_simple_decl_re)
+    defs = view.find_all(_all_decl_re)
     # now prune out definitions found in comments / strings
     _defs = []
 
@@ -267,20 +272,20 @@ def get_docstring(view, edit, target):
 
     return whole_region, docstr_region, style, new
 
-def get_class_region(view, target):
-    """Find a region of all the lines that make up a class
+def get_whole_block(view, target):
+    """Find a region of all the lines that make up a class / function
 
     Args:
         view (View): current view
         target (Region): region of the declaration of interest
 
     Returns:
-        sublime.Region: all lines in the class
+        sublime.Region: all lines in the class / function
     """
     first_line = view.substr(view.line(target.a))
     leading_wspace = first_line[:len(first_line) - len(first_line.lstrip())]
 
-    eoclass_row = None
+    eoblock_row = None
 
     first_row = view.rowcol(target.a)[0]
     eof_row = view.rowcol(view.size())[0]
@@ -294,18 +299,86 @@ def get_class_region(view, target):
 
         if not (line.startswith(leading_wspace) and
                 line[len(leading_wspace)] in r" \t"):
-            eoclass_row = i - 1
+            eoblock_row = i - 1
             break
 
-    if eoclass_row is None:
+    if eoblock_row is None:
         if "string" in view.scope_name(view.text_point(eof_row, 0)):
             raise RuntimeError("unclosed string literal in file")
         else:
-            eoclass_row = eof_row
+            eoblock_row = eof_row
 
-    class_region = sublime.Region(view.line(target.a).a,
-                                  view.text_point(eoclass_row + 1, 0))
-    return class_region
+    block_region = sublime.Region(view.line(target.a).a,
+                                  view.text_point(eoblock_row + 1, 0))
+    return block_region
+
+def find_all_in_region(view, reg, what, blacklist=None, flags=0):
+    """
+    Args:
+        view (View): view to search in
+        reg (Region or point): region to search in. If point, then
+            search from that point to the end of the file
+        what (str): a regex of the search
+        blacklist (list of regions): regions to ignore
+        flags (int): passed to :py:func:`view.find`
+
+    Returns:
+        list: list of regions that match `what`
+    """
+    if not isinstance(reg, sublime.Region):
+        reg = sublime.Region(reg, view.size())
+    if not blacklist:
+        blacklist = []
+
+    matches = []
+
+    p0 = reg.a
+    while True:
+        found_reg = view.find(what, p0, flags=flags)
+        if found_reg.b == -1 or found_reg.a >= reg.b:
+            break
+        else:
+            in_blacklist = False
+            for bl_reg in blacklist:
+                if bl_reg.intersects(found_reg):
+                    in_blacklist = True
+                    break
+
+            if not in_blacklist:
+                matches.append(found_reg)
+            p0 = found_reg.b
+
+    return matches
+
+def get_all_blocks(view, reg, classes_only=False):
+    """Find all functions / classes in a given region
+
+    Args:
+        view(View): current view
+        reg(Region): region in which to search
+        classes_only(bool): only search for classes, not functions
+
+    Returns:
+        list: of regions of the whole blocks
+    """
+    if not reg:
+        reg = sublime.Region(0, view.size())
+
+    if classes_only:
+        nested_re = _class_decl_re
+    else:
+        nested_re = _all_decl_re
+
+    nested_blocks = find_all_in_region(view, reg, nested_re)
+    for i in range(len(nested_blocks) - 1, -1, -1):
+        block = nested_blocks[i]
+        scope_name = view.scope_name(block.a)
+        if "comment" in scope_name or "string" in scope_name:
+            nested_blocks.pop(i)
+        else:
+            whole_block = get_whole_block(view, block)
+            nested_blocks[i] = whole_block
+    return nested_blocks
 
 def is_python_file(view):
     """Check if view is a python file
@@ -463,6 +536,32 @@ def parse_function_params(s, default_type="TYPE",
 
     return params
 
+def parse_function_exceptions(view, target, default_description="Description"):
+    """Scan a class' code and look for exceptions
+
+    Args:
+        view (View): current view
+        target (Region): region of the declaration of interest
+        default_description (str): default text
+
+    Returns:
+        OrderedDict containing Parameter instances
+    """
+    default_description = r"${{NUMBER:{0}}}".format(default_description)
+    excepts = OrderedDict()
+
+    whole_function = get_whole_block(view, target)
+
+    e_regions = find_all_in_region(view, whole_function,
+                                   r"^[^\S\n]*raise[^\S\n]+([^\s\(]+)")
+    for e in e_regions:
+        e_name = view.substr(e).strip()[len("raise"):].strip()
+        if not e_name in excepts:
+            excepts[e_name] = docstring_styles.Parameter([e_name], None,
+                                                         default_description,
+                                                         tag=len(excepts))
+    return excepts
+
 def get_attr_type(value, default_type, existing_type):
     """Try to figure out type of attribute from declaration
 
@@ -513,67 +612,44 @@ def parse_class_attributes(view, target, default_type="TYPE",
 
     attribs = OrderedDict()
 
-    # -> find region containing the entire class
-    class_region = get_class_region(view, target)
+    class_region = get_whole_block(view, target)
 
-    # -> trim out class definitions that occur inside class_region
-    row0 = view.rowcol(target.a)[0]
-    p0 = view.text_point(row0 + 1, 0)
-    blacklist = []
-
-    while True:
-        reg = view.find(r"^[^\S\n]*class\s*[A-Za-z0-9_]+\s*"
-                        r"\([A-Za-z0-9_,\s]*\)\s*:", p0)
-        if reg.b == -1 or reg.a >= class_region.b:
-            break
-        else:
-            bl_region = get_class_region(view, reg)
-            blacklist.append(bl_region)
-            p0 = bl_region.b
+    body_region = sublime.Region(target.b, class_region.b)
+    blacklist = get_all_blocks(view, body_region, classes_only=True)
 
     _, body_indent_txt, _ = get_indentation(view, target, module_decl=False)
     attr_re = (r"(^{0}([A-Za-z0-9_]+)|"
-               r"^[^\S\n]*self.([A-Za-z0-9_]+))\s*=".format(body_indent_txt))
-    p0 = view.text_point(row0 + 1, 0)
-    while True:
-        attr_reg = view.find(attr_re, p0)
-        if attr_reg.b == -1 or attr_reg.a >= class_region.b:
-            break
+               r"^[^\S\n]*self\.([A-Za-z0-9_]+))\s*=".format(body_indent_txt))
+    all_attr_regions = find_all_in_region(view, body_region, attr_re,
+                                          blacklist=blacklist)
+
+    for attr_reg in all_attr_regions:
+        name = view.substr(attr_reg).split('=')[0].strip()
+        if name.startswith('self.'):
+            name = name[len('self.'):]
+        if name.startswith('_'):
+            continue
+
+        # discover data type from declaration
+        if name in attribs:
+            existing_type = attribs[name].types
         else:
-            valid_attr = True
-            for bl_reg in blacklist:
-                if bl_reg.contains(attr_reg):
-                    valid_attr = False
-                    break
+            existing_type = default_type
+        value = view.substr(view.line(attr_reg.a)).split('=')[1]
+        paramtype = get_attr_type(value, default_type, existing_type)
 
-            p0 = attr_reg.b
-            if valid_attr:
-                name = view.substr(attr_reg).split('=')[0].strip()
-                if name.startswith('self.'):
-                    name = name[len('self.'):]
-                if name.startswith('_'):
-                    continue
+        if name in attribs:
+            tag = attribs[name].tag
+        else:
+            tag = len(attribs)
 
-                # discover data type from declaration
-                if name in attribs:
-                    existing_type = attribs[name].types
-                else:
-                    existing_type = default_type
-                value = view.substr(view.line(attr_reg.a)).split('=')[1]
-                paramtype = get_attr_type(value, default_type, existing_type)
+        if not paramtype.startswith(r"${NUMBER:"):
+            paramtype = r"${{NUMBER:{0}}}".format(paramtype)
 
-                if name in attribs:
-                    tag = attribs[name].tag
-                else:
-                    tag = len(attribs)
-
-                if not paramtype.startswith(r"${NUMBER:"):
-                    paramtype = r"${{NUMBER:{0}}}".format(paramtype)
-
-                param = docstring_styles.Parameter([name], paramtype,
-                                                   default_description,
-                                                   tag=tag)
-                attribs[name] = param
+        param = docstring_styles.Parameter([name], paramtype,
+                                           default_description,
+                                           tag=tag)
+        attribs[name] = param
 
     return attribs
 
@@ -659,12 +735,21 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
             attribs = parse_module_attributes(view)
             ds.update_attributes(attribs)
     else:
-        decl_str = view.substr(target)
-        typ, name, args = re.match(_simple_decl_re, decl_str).groups()  # pylint: disable=unused-variable
+        decl_str = view.substr(target).lstrip()
+        if decl_str.startswith('def'):
+            typ, name, args = re.match(_func_decl_re, decl_str).groups()
+        elif decl_str.startswith('class'):
+            typ, name, _, args = re.match(_class_decl_re, decl_str).groups()
+        else:
+            raise RuntimeError
+
         if typ == "def":
             if settings.get("inspect_function_parameters", True):
                 params = parse_function_params(args, optional_tag=optional_tag)
                 ds.update_parameters(params)
+            if settings.get("inspect_exceptions", True):
+                excepts = parse_function_exceptions(view, target)
+                ds.update_exceptions(excepts)
         elif typ == "class":
             if settings.get("inspect_class_attributes", True):
                 attribs = parse_class_attributes(view, target)

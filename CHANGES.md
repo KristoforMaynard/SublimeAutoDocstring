@@ -3,6 +3,7 @@
 ## master branch
 
   - Inspects class / module attributes and inserts a stub for each
+  - Discovers what exceptions are raised in a function and inserts a stub for each
   - add settings for suppressing autodetection
 
 ## 0.2.6

@@ -8,6 +8,7 @@ Features
 --------
 
   - Inspects function definitions and inserts a stub for each parameter
+  - Discovers what exceptions are raised in a function and inserts a stub for each
   - Inspects class / module attributes and inserts a stub for each
   - Rearranges parameters to reflect their order in the function definition
   - Automatically detects style: Google, Numpy
@@ -22,6 +23,7 @@ Settings
 --------
 
   - `inspect_class_attributes`: add / remove class attributes to stay in sync with the code
+  - `inspect_exceptions`: add / remove exceptions to stay in sync with the code
   - `inspect_function_parameters`: add / remove function parameters to stay in sync with the code
   - `inspect_module_attributes`: add / remove module attributes to stay in sync with the code
   - `optional_tag` (string): text to add to the type of keyword arguments. Supplying an empty string won't add anything special to new keyword arguments.

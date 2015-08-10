@@ -1,6 +1,8 @@
 # -*- coding: utf-8 -*-
 """Docstring Parsers/Formatters"""
 
+# TODO: break this module up into smaller pieces
+
 import sys
 import string
 import re
@@ -301,6 +303,10 @@ class GoogleSection(NapoleonSection):
                               param_formatter),
                "Deleted Attributes": (param_parser,
                                       param_formatter),
+               "Raises": (param_parser,
+                          param_formatter),
+               "No Longer Raises": (param_parser,
+                                    param_formatter),
                "Returns": (returns_parser,
                            returns_formatter),
               }
@@ -393,6 +399,10 @@ class NumpySection(NapoleonSection):
                               param_formatter),
                "Deleted Attributes": (param_parser,
                                       param_formatter),
+               "Raises": (param_parser,
+                          param_formatter),
+               "No Longer Raises": (param_parser,
+                                    param_formatter),
                "Returns": (returns_parser,
                            returns_formatter),
               }
@@ -482,6 +492,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                             ("Deleted Attributes", None),
                             ("Methods", None),
                             ("Raises", None),
+                            ("No Longer Raises", None),
                             ("Warns", None),
                             ("See Also", None),
                             ("Warning", None),
@@ -581,6 +592,14 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             params (OrderedDict): params objects keyed by their names
         """
         self._update_section(attribs, "Attributes", alpha_order=alpha_order)
+
+    def update_exceptions(self, attribs, alpha_order="new"):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+        self._update_section(attribs, "Raises", del_prefix="No Longer ",
+                             alpha_order=alpha_order)
 
 class GoogleDocstring(NapoleonDocstring):
     """"""
