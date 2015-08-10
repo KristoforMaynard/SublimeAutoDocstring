@@ -389,30 +389,37 @@ def get_all_blocks(view, reg, classes_only=False):
             nested_blocks[i] = whole_block
     return nested_blocks
 
-def is_python_file(view):
-    """Check if view is a python file
+def get_attr_type(value, default_type, existing_type):
+    """Try to figure out type of attribute from declaration
 
-    Checks file extension and syntax highlighting
+    if existing_type != default_type, then existing_type is returned
+    regardless of what's in this declaration
 
     Args:
-        view: current ST view
+        value (str): the right hand side of the equal sign
+        default_type (str): default text for the type
+        existing_type (str): if attr was already set, what was the
+            type? Should equal defualt_type if the attr was not
+            previously set
 
     Returns:
-        (str, None): "python, "cython", or None if neither
+        str: string describing the type of the attribute
     """
-    filename = view.file_name()
-    if filename:
-        _, ext = os.path.splitext(filename)
-    else:
-        ext = ""
-    if ext in ['.py', '.pyx', '.pxd']:
-        return True
+    snippet_default = r"${{NUMBER:{0}}}".format(default_type)
+    if existing_type not in [default_type, snippet_default]:
+        return existing_type
 
-    syntax = view.settings().get('syntax')
-    if "Python" in syntax or "Cython" in syntax:
-        return True
+    value = value.strip()
+    try:
+        ret = ast.literal_eval(value).__class__.__name__
+        if ret == None.__class__.__name__:
+            ret = default_type
+    except ValueError:
+        ret = default_type
+    except SyntaxError:
+        ret = default_type
 
-    return False
+    return ret
 
 def get_desired_style(view, default="google"):
     """Get desired style / auto-discover from view if requested
@@ -575,38 +582,6 @@ def parse_function_exceptions(view, target, default_description="Description"):
                                                          tag=len(excepts))
     return excepts
 
-def get_attr_type(value, default_type, existing_type):
-    """Try to figure out type of attribute from declaration
-
-    if existing_type != default_type, then existing_type is returned
-    regardless of what's in this declaration
-
-    Args:
-        value (str): the right hand side of the equal sign
-        default_type (str): default text for the type
-        existing_type (str): if attr was already set, what was the
-            type? Should equal defualt_type if the attr was not
-            previously set
-
-    Returns:
-        str: string describing the type of the attribute
-    """
-    snippet_default = r"${{NUMBER:{0}}}".format(default_type)
-    if existing_type not in [default_type, snippet_default]:
-        return existing_type
-
-    value = value.strip()
-    try:
-        ret = ast.literal_eval(value).__class__.__name__
-        if ret == None.__class__.__name__:
-            ret = default_type
-    except ValueError:
-        ret = default_type
-    except SyntaxError:
-        ret = default_type
-
-    return ret
-
 def parse_class_attributes(view, target, default_type="TYPE",
                            default_description="Description"):
     """Scan a class' code and look for attributes
@@ -627,9 +602,13 @@ def parse_class_attributes(view, target, default_type="TYPE",
 
     class_region = get_whole_block(view, target)
 
+    # blacklist nested classes, as in, don't detect attributes of nested
+    # classes
     body_region = sublime.Region(target.b, class_region.b)
     blacklist = get_all_blocks(view, body_region, classes_only=True)
 
+    # find the attributes that are at the class' indent level, or are set
+    # via. `self.*=*` in a method
     _, body_indent_txt, _ = get_indentation(view, target, module_decl=False)
     attr_re = (r"(^{0}([A-Za-z0-9_]+)|"
                r"^[^\S\n]*self\.([A-Za-z0-9_]+))\s*=".format(body_indent_txt))
@@ -816,6 +795,31 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
         view.run_command('insert_snippet', {'contents': new_docstr})
     else:
         view.replace(edit, old_ds_region, new_docstr)
+
+def is_python_file(view):
+    """Check if view is a python file
+
+    Checks file extension and syntax highlighting
+
+    Args:
+        view: current ST view
+
+    Returns:
+        (str, None): "python, "cython", or None if neither
+    """
+    filename = view.file_name()
+    if filename:
+        _, ext = os.path.splitext(filename)
+    else:
+        ext = ""
+    if ext in ['.py', '.pyx', '.pxd']:
+        return True
+
+    syntax = view.settings().get('syntax')
+    if "Python" in syntax or "Cython" in syntax:
+        return True
+
+    return False
 
 class AutoDocstringCommand(sublime_plugin.TextCommand):
     def run(self, edit):
