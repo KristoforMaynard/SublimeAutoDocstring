@@ -725,6 +725,9 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     template_order = settings.get("template_order", False)
     optional_tag = settings.get("optional_tag", "optional")
     use_snippet = settings.get("use_snippet", False)
+    sort_class_attributes = settings.get("sort_class_attributes", True)
+    sort_exceptions = settings.get("sort_exceptions", True)
+    sort_module_attributes = settings.get("sort_module_attributes", True)
     ds = docstring_styles.make_docstring_obj(old_docstr, desired_style,
                                              template_order=template_order)
 
@@ -732,7 +735,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     if _module_flag:
         if settings.get("inspect_module_attributes", True):
             attribs = parse_module_attributes(view)
-            ds.update_attributes(attribs)
+            ds.update_attributes(attribs, alpha_order=sort_module_attributes)
     else:
         decl_str = view.substr(target).lstrip()
         if decl_str.startswith('def'):
@@ -748,11 +751,11 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
                 ds.update_parameters(params)
             if settings.get("inspect_exceptions", True):
                 excepts = parse_function_exceptions(view, target)
-                ds.update_exceptions(excepts)
+                ds.update_exceptions(excepts, alpha_order=sort_exceptions)
         elif typ == "class":
             if settings.get("inspect_class_attributes", True):
                 attribs = parse_class_attributes(view, target)
-                ds.update_attributes(attribs)
+                ds.update_attributes(attribs, alpha_order=sort_class_attributes)
 
     if is_new:
         ds.finalize_section("Summary", r"${NUMBER:Summary}")

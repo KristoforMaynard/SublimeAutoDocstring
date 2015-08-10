@@ -516,12 +516,9 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             sec_alias (str): section name that appears in teh docstring
             del_prefix (str): prefix for section that holds params that
                 no longer exist.
-            alpha_order (str): if 'all', everything is sorted
-                alphabetically, if 'new', only new params are
-                sorted. If false, param order is the same as they
-                appear in the OrderedDict, NOT YET IMPLEMENTED
+            alpha_order (bool): whether or not to alphabetically sort
+                the params
         """
-        # TODO: implement alphabetical order
         if not sec_alias:
             sec_alias = sec_name
 
@@ -529,6 +526,12 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             return None
         elif not self.section_exists(sec_name):
             self.finalize_section(sec_alias, "")
+
+        if alpha_order:
+            sorted_params = OrderedDict()
+            for k in sorted(list(params.keys()), key=str.lower):
+                sorted_params[k] = params[k]
+            params = sorted_params
 
         current_dict = self.sections[sec_name].args
         # print("current::", current)
@@ -586,14 +589,14 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         """
         self._update_section(params, "Parameters", self.PREFERRED_PARAMS_ALIAS)
 
-    def update_attributes(self, attribs, alpha_order="new"):
+    def update_attributes(self, attribs, alpha_order=True):
         """
         Args:
             params (OrderedDict): params objects keyed by their names
         """
         self._update_section(attribs, "Attributes", alpha_order=alpha_order)
 
-    def update_exceptions(self, attribs, alpha_order="new"):
+    def update_exceptions(self, attribs, alpha_order=True):
         """
         Args:
             params (OrderedDict): params objects keyed by their names
