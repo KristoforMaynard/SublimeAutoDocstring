@@ -13,4 +13,5 @@
   "style": "auto_google",
   "template_order": false,
   "use_snippet": true,
+  "start_with_newline": ""
 }

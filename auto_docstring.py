@@ -728,10 +728,21 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     sort_class_attributes = settings.get("sort_class_attributes", True)
     sort_exceptions = settings.get("sort_exceptions", True)
     sort_module_attributes = settings.get("sort_module_attributes", True)
-    start_with_newline = settings.get("start_with_newline", False)
+    start_with_newline = settings.get("start_with_newline", "")
 
     ds = docstring_styles.make_docstring_obj(old_docstr, desired_style,
                                              template_order=template_order)
+
+    # if start_with_newline was given as a comma separated list of styles,
+    # then turn that into a bool of whether or not ds.STYLE_NAME is in the
+    # list
+    try:
+        start_with_newline = start_with_newline.split(',')
+        start_with_newline = [s.strip().lower() for s in start_with_newline]
+        start_with_newline = ds.STYLE_NAME in start_with_newline
+    except AttributeError:
+        # start_with_newline was probably given as a bool to affect all styles
+        pass
 
     # get declaration info
     if _module_flag:

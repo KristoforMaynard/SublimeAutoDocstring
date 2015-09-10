@@ -411,6 +411,7 @@ class NumpySection(NapoleonSection):
 class Docstring(object):
     """Handle parsing / modifying / writing docstrings"""
 
+    STYLE_NAME = "none"
     SECTION_STYLE = Section
     TEMPLATE = OrderedDict([("Summary", None)])
     PREFERRED_PARAMS_ALIAS = "Args"
@@ -481,6 +482,7 @@ class Docstring(object):
 class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
     """Styles understood by napoleon, aka. Google/Numpy"""
     # TODO: is there any common funcionality to put here?
+    STYLE_NAME = "napoleon"
     TEMPLATE = OrderedDict([("Summary", None),
                             ("Parameters", None),
                             ("Keyword Arguments", None),
@@ -606,6 +608,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
 
 class GoogleDocstring(NapoleonDocstring):
     """"""
+    STYLE_NAME = "google"
     SECTION_STYLE = GoogleSection
     SECTION_RE = r"^[A-Za-z0-9][A-Za-z0-9 \t]*:\s*$"
     PREFERRED_PARAMS_ALIAS = "Args"
@@ -664,6 +667,7 @@ class GoogleDocstring(NapoleonDocstring):
 
 class NumpyDocstring(NapoleonDocstring):
     """"""
+    STYLE_NAME = "numpy"
     SECTION_STYLE = NumpySection
     SECTION_RE = r"^([A-Za-z0-9][A-Za-z0-9 \t]*)\s*\n-+\s*?$"
     PREFERRED_PARAMS_ALIAS = "Parameters"
