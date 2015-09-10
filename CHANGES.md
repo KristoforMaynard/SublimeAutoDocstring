@@ -3,6 +3,7 @@
 ## master branch
 
   - Add `default_description`, `default_summary`, and `default_type` settings per [Issue #2](https://github.com/KristoforMaynard/SublimeAutoDocstring/issues/2)
+  - Add `start_with_newline` setting for new docstrings per [Issue #4](https://github.com/KristoforMaynard/SublimeAutoDocstring/issues/4)
 
 ## 0.3.0
 

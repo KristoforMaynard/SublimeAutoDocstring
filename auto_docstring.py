@@ -728,6 +728,8 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     sort_class_attributes = settings.get("sort_class_attributes", True)
     sort_exceptions = settings.get("sort_exceptions", True)
     sort_module_attributes = settings.get("sort_module_attributes", True)
+    start_with_newline = settings.get("start_with_newline", False)
+
     ds = docstring_styles.make_docstring_obj(old_docstr, desired_style,
                                              template_order=template_order)
 
@@ -763,7 +765,10 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
                 ds.update_attributes(attribs, alpha_order=sort_class_attributes)
 
     if is_new:
-        snippet_summary = r"${{NUMBER:{0}}}".format(default_summary)
+        snippet_summary = ""
+        if start_with_newline:
+            snippet_summary += "\n"
+        snippet_summary += r"${{NUMBER:{0}}}".format(default_summary)
         ds.finalize_section("Summary", snippet_summary)
 
     if is_new and not _module_flag and typ == "def" and name != "__init__":
