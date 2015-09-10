@@ -2,6 +2,8 @@
 
 ## master branch
 
+  - Add `default_description`, `default_summary`, and `default_type` settings per [Issue #2](https://github.com/KristoforMaynard/SublimeAutoDocstring/issues/2)
+
 ## 0.3.0
 
   - Inspects class / module attributes and inserts a stub for each

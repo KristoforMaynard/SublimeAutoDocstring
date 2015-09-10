@@ -462,15 +462,14 @@ def get_desired_style(view, default="google"):
     else:
         return docstring_styles.STYLE_LOOKUP[style]
 
-def parse_function_params(s, default_type="TYPE",
-                          default_description="Description",
+def parse_function_params(s, default_type, default_description,
                           optional_tag="optional"):
     """Parse function parameters into an OrderedDict of Parameters
 
     Args:
         s (str): everything in the parenthesis of a function
             declaration
-        default_type (str, optional): default type text
+        default_type (str): default type text
         default_description (str): default text
         optional_tag (str): tag included with type for kwargs when
             they are created
@@ -552,7 +551,7 @@ def parse_function_params(s, default_type="TYPE",
 
     return params
 
-def parse_function_exceptions(view, target, default_description="Description"):
+def parse_function_exceptions(view, target, default_description):
     """Scan a class' code and look for exceptions
 
     Args:
@@ -582,8 +581,7 @@ def parse_function_exceptions(view, target, default_description="Description"):
                                                          tag=len(excepts))
     return excepts
 
-def parse_class_attributes(view, target, default_type="TYPE",
-                           default_description="Description"):
+def parse_class_attributes(view, target, default_type, default_description):
     """Scan a class' code and look for attributes
 
     Args:
@@ -648,8 +646,7 @@ def parse_class_attributes(view, target, default_type="TYPE",
 
     return attribs
 
-def parse_module_attributes(view, default_type="TYPE",
-                            default_description="Description"):
+def parse_module_attributes(view, default_type, default_description):
     """Scan a module's code and look for attributes
 
     Args:
@@ -724,6 +721,9 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     settings = sublime.load_settings(_SETTINGS_FNAME)
     template_order = settings.get("template_order", False)
     optional_tag = settings.get("optional_tag", "optional")
+    default_description = settings.get("default_description", "Description")
+    default_summary = settings.get("default_summary", "Summary")
+    default_type = settings.get("default_type", "TYPE")
     use_snippet = settings.get("use_snippet", False)
     sort_class_attributes = settings.get("sort_class_attributes", True)
     sort_exceptions = settings.get("sort_exceptions", True)
@@ -734,7 +734,8 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     # get declaration info
     if _module_flag:
         if settings.get("inspect_module_attributes", True):
-            attribs = parse_module_attributes(view)
+            attribs = parse_module_attributes(view, default_type,
+                                              default_description)
             ds.update_attributes(attribs, alpha_order=sort_module_attributes)
     else:
         decl_str = view.substr(target).lstrip()
@@ -747,21 +748,28 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
 
         if typ == "def":
             if settings.get("inspect_function_parameters", True):
-                params = parse_function_params(args, optional_tag=optional_tag)
+                params = parse_function_params(args, default_type,
+                                               default_description,
+                                               optional_tag=optional_tag)
                 ds.update_parameters(params)
             if settings.get("inspect_exceptions", True):
-                excepts = parse_function_exceptions(view, target)
+                excepts = parse_function_exceptions(view, target,
+                                                    default_description)
                 ds.update_exceptions(excepts, alpha_order=sort_exceptions)
         elif typ == "class":
             if settings.get("inspect_class_attributes", True):
-                attribs = parse_class_attributes(view, target)
+                attribs = parse_class_attributes(view, target, default_type,
+                                                 default_description)
                 ds.update_attributes(attribs, alpha_order=sort_class_attributes)
 
     if is_new:
-        ds.finalize_section("Summary", r"${NUMBER:Summary}")
+        snippet_summary = r"${{NUMBER:{0}}}".format(default_summary)
+        ds.finalize_section("Summary", snippet_summary)
 
     if is_new and not _module_flag and typ == "def" and name != "__init__":
-        ds.add_dummy_returns(r"${NUMBER:TYPE}", r"${NUMBER:Description}")
+        snippet_type = r"${{NUMBER:{0}}}".format(default_type)
+        snippet_description = r"${{NUMBER:{0}}}".format(default_description)
+        ds.add_dummy_returns(snippet_type, snippet_description)
 
     # -> create new docstring from meta
     new_ds = desired_style(ds)

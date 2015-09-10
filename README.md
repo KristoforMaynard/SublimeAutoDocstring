@@ -26,6 +26,9 @@ Settings
 
   A shortcut to open the settings file is in menu under `Preferences/Package Settings/AutoDocstring/Settings - User`
 
+  - `default_description` *(default="Description"): Filler text for descriptions
+  - `default_summary` *(default="Summary"): Filler text for summary
+  - `default_type` *(default="TYPE"): Filler text for type
   - `inspect_class_attributes` *(default=true)*: add / remove class attributes to stay in sync with the code
   - `inspect_exceptions` *(default=true)*: add / remove exceptions to stay in sync with the code.
   - `inspect_function_parameters` *(default=true)*: add / remove function parameters to stay in sync with the code.
