@@ -2,8 +2,11 @@
 
 ## master branch
 
+## 0.3.2
+
   - Add `default_description`, `default_summary`, and `default_type` settings per [Issue #2](https://github.com/KristoforMaynard/SublimeAutoDocstring/issues/2)
   - Add `start_with_newline` setting for new docstrings per [Issue #4](https://github.com/KristoforMaynard/SublimeAutoDocstring/issues/4)
+  - Add `default_return_names` for numpy style
 
 ## 0.3.0
 
