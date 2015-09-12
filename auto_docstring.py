@@ -722,6 +722,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     template_order = settings.get("template_order", False)
     optional_tag = settings.get("optional_tag", "optional")
     default_description = settings.get("default_description", "Description")
+    default_return_name = settings.get("default_return_name", "name")
     default_summary = settings.get("default_summary", "Summary")
     default_type = settings.get("default_type", "TYPE")
     use_snippet = settings.get("use_snippet", False)
@@ -783,9 +784,13 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
         ds.finalize_section("Summary", snippet_summary)
 
     if is_new and not _module_flag and typ == "def" and name != "__init__":
+        if default_return_name:
+            snippet_name = r"${{NUMBER:{0}}}".format(default_return_name)
+        else:
+            snippet_name = ""
         snippet_type = r"${{NUMBER:{0}}}".format(default_type)
         snippet_description = r"${{NUMBER:{0}}}".format(default_description)
-        ds.add_dummy_returns(snippet_type, snippet_description)
+        ds.add_dummy_returns(snippet_name, snippet_type, snippet_description)
 
     # -> create new docstring from meta
     new_ds = desired_style(ds)

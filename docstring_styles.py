@@ -659,9 +659,14 @@ class GoogleDocstring(NapoleonDocstring):
 
         return s
 
-    def add_dummy_returns(self, typ, description):
+    def add_dummy_returns(self, name, typ, description):
         if not self.section_exists("Returns"):
-            text = "    {0}: {1}".format(typ, description)
+            if name:
+                # text = "    {0} ({1}): {2}".format(name, typ, description)
+                # print("Note: Google docstrings ignore name of return types")
+                text = "    {0}: {1}".format(typ, description)
+            else:
+                text = "    {0}: {1}".format(typ, description)
             self.finalize_section("Returns", text)
 
 
@@ -730,9 +735,12 @@ class NumpyDocstring(NapoleonDocstring):
 
         return s
 
-    def add_dummy_returns(self, typ, description):
+    def add_dummy_returns(self, name, typ, description):
         if not self.section_exists("Returns"):
-            text = "{0} : {1}".format(typ, description)
+            if name:
+                text = "{0} : {1}\n    {2}".format(name, typ, description)
+            else:
+                text = "{0}\n    {1}".format(typ, description)
             self.finalize_section("Returns", text)
 
 

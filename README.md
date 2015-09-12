@@ -27,6 +27,7 @@ Settings
   A shortcut to open the settings file is in menu under `Preferences/Package Settings/AutoDocstring/Settings - User`
 
   - `default_description` *(default="Description")*: Filler text for descriptions
+  - `default_return_name` *(default="name")*: Numpy style only. Default parameter name for return values. Set as an empty string to leave return values unnamed.
   - `default_summary` *(default="Summary")*: Filler text for summary
   - `default_type` *(default="TYPE")*: Filler text for type
   - `inspect_class_attributes` *(default=true)*: add / remove class attributes to stay in sync with the code
