@@ -503,6 +503,16 @@ def parse_function_params(s, default_type, default_description,
     kwargs_end = len(arg_ids)
     defaults = [default_type] * kwargs_begin + default_nodes
 
+    for arg, default in zip(tree.body.args.kwonlyargs, tree.body.args.kw_defaults):
+        try:
+            arg_ids.append(arg.arg)
+        except AttributeError:
+            arg_ids.append(arg.id)
+
+        if default is None:
+            default = default_type
+        defaults.append(default)
+
     if tree.body.args.vararg:
         try:
             name = tree.body.args.vararg.arg
