@@ -557,11 +557,12 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         # move them from the Parameters section of the docstring to the
         # deleted parameters section
         if len(current_dict):
-            del_sec_name = del_prefix + sec_alias
+            del_sec_name = del_prefix + sec_name
+            del_sec_alias = del_prefix + sec_alias
             print("Warning, killing parameters named:",
                   list(current_dict.keys()))
             # TODO: put a switch here for other bahavior?
-            if not self.section_exists(del_sec_name):
+            if not self.section_exists(self.SECTION_STYLE.resolve_alias(del_sec_name)):
                 self.finalize_section(del_sec_name, "")
 
             deled_params = self.sections[self.SECTION_STYLE.resolve_alias(del_sec_name)]
