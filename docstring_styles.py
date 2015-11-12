@@ -207,6 +207,8 @@ class NapoleonSection(Section):
                "Arguments": "Parameters",
                "Deleted Args": "Deleted Parameters",
                "Deleted Arguments": "Deleted Parameters",
+               "Other Args": "Other Parameters",
+               "Other Arguments": "Other Parameters",
                "Keyword Args": "Keyword Arguments",
                "Return": "Returns",
                "Warnings": "Warning"
@@ -506,7 +508,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                            ])
 
     def _update_section(self, params, sec_name, sec_alias=None,
-                        del_prefix="Deleted ", alpha_order=False):
+                        del_prefix="Deleted ", alpha_order=False,
+                        other_sections=()):
         """Update section to add / remove params
 
         As a failsafe, params that are removed are placed in a
@@ -529,6 +532,14 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         elif not self.section_exists(sec_name):
             self.finalize_section(sec_alias, "")
 
+        # put together which other sections exist so we can use them to
+        # exclude params that exist in them
+        _other = []
+        for _secname in other_sections:
+            if self.section_exists(self.SECTION_STYLE.resolve_alias(_secname)):
+                _other.append(self.sections[self.SECTION_STYLE.resolve_alias(_secname)])
+        other_sections = _other
+
         if alpha_order:
             sorted_params = OrderedDict()
             for k in sorted(list(params.keys()), key=str.lower):
@@ -550,6 +561,12 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                     param = None
                 else:
                     tags_seen[param.tag] = True
+            else:
+                # if param is in one of the 'other sections', then don't
+                # worry about it
+                for sec in other_sections:
+                    if name in sec.args:
+                        param = None
             if param:
                 new[name] = param
 
@@ -590,7 +607,9 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         Args:
             params (OrderedDict): params objects keyed by their names
         """
-        self._update_section(params, "Parameters", self.PREFERRED_PARAMS_ALIAS)
+        other_sections = ['Other Parameters', 'Keyword Parameters']
+        self._update_section(params, "Parameters", self.PREFERRED_PARAMS_ALIAS,
+                             other_sections=other_sections)
 
     def update_attributes(self, attribs, alpha_order=True):
         """
