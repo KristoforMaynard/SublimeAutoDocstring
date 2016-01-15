@@ -140,7 +140,7 @@ def get_indentation(view, target, module_decl=False):
 
     return def_indent_txt, body_indent_txt, has_indented_body
 
-def get_docstring(view, edit, target):
+def get_docstring(view, edit, target, default_qstyle=None):
     """Find a declaration's docstring
 
     This will return a docstring even if it has to write one
@@ -156,11 +156,11 @@ def get_docstring(view, edit, target):
         target: region of the declaration of interest
 
     Returns:
-        (whole_region, docstr_region, style, new)
+        (whole_region, docstr_region, qstyle, new)
 
         whole_region: Region of entire docstring (including quotes)
         docstr_region: Region of docstring excluding quotes
-        style: the character marking the ends of the docstring,
+        qstyle: the character marking the ends of the docstring,
             will be one of [\""", ''', ", ']
         new: True if we inserted a new docstring
 
@@ -201,7 +201,7 @@ def get_docstring(view, edit, target):
     else:
         same_line = False
 
-    style = None
+    qstyle = None
     whole_region = None
     docstr_region = None
 
@@ -213,14 +213,14 @@ def get_docstring(view, edit, target):
         literal_prefix = ""
 
     if next_chars.startswith(('"""', "'''")):
-        style = next_chars[:3]
+        qstyle = next_chars[:3]
     elif next_chars.startswith(('"', "'")):
-        style = next_chars[0]
+        qstyle = next_chars[0]
 
-    if style:
+    if qstyle:
         # there exists a docstring, get its region
-        next_chars_reg.b = next_chars_reg.a + len(literal_prefix) + len(style)
-        docstr_end = view.find(r"(?<!\\){0}".format(style), next_chars_reg.b)
+        next_chars_reg.b = next_chars_reg.a + len(literal_prefix) + len(qstyle)
+        docstr_end = view.find(r"(?<!\\){0}".format(qstyle), next_chars_reg.b)
         if docstr_end.a < next_chars_reg.a:
             print("Autodocstr: oops, existing docstring on line",
                   target_end_lineno, "has no end?")
@@ -242,7 +242,7 @@ def get_docstring(view, edit, target):
         return None, None, None, False
     else:
         # no docstring exists, but make / insert one
-        style = '"""'
+        qstyle = default_qstyle
 
         _, body_indent_txt, has_indented_body = get_indentation(view, target,
                                                                 module_level)
@@ -270,16 +270,16 @@ def get_docstring(view, edit, target):
                 prefix = "\n"
 
         stub = "{0}{1}{2}<FRESHLY_INSERTED>{2}{3}" \
-               "".format(prefix, body_indent_txt, style, suffix)
+               "".format(prefix, body_indent_txt, qstyle, suffix)
         view.replace(edit, sublime.Region(a, b), stub)
 
-        whole_region = view.find("{0}<FRESHLY_INSERTED>{0}".format(style),
+        whole_region = view.find("{0}<FRESHLY_INSERTED>{0}".format(qstyle),
                                  target.b, sublime.LITERAL)
-        docstr_region = sublime.Region(whole_region.a + len(style),
-                                       whole_region.b - len(style))
+        docstr_region = sublime.Region(whole_region.a + len(qstyle),
+                                       whole_region.b - len(qstyle))
         new = True
 
-    return whole_region, docstr_region, style, new
+    return whole_region, docstr_region, qstyle, new
 
 def get_whole_block(view, target):
     """Find a region of all the lines that make up a class / function
@@ -705,7 +705,8 @@ def parse_module_attributes(view, default_type, default_description):
 
     return attribs
 
-def autodoc(view, edit, region, all_defs, desired_style, file_type):
+def autodoc(view, edit, region, all_defs, desired_style, file_type,
+            default_qstyle=None):
     """actually do the business of auto-documenting
 
     Args:
@@ -718,16 +719,6 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
         desired_style (class): subclass of Docstring
         file_type (str): 'python' or 'cython', not yet used
     """
-    target = find_preceding_declaration(view, all_defs, region)
-    # print("TARGET::", target)
-    _module_flag = (target.a == target.b == 0)
-    # print("-> found target", target, _module_flag)
-
-    old_ds_info = get_docstring(view, edit, target)
-    old_ds_whole_region, old_ds_region, quote_style, is_new = old_ds_info
-
-    # TODO: parse existing docstring into meta data
-    old_docstr = view.substr(old_ds_region)
     settings = sublime.load_settings(_SETTINGS_FNAME)
     template_order = settings.get("template_order", False)
     optional_tag = settings.get("optional_tag", "optional")
@@ -740,6 +731,20 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type):
     sort_exceptions = settings.get("sort_exceptions", True)
     sort_module_attributes = settings.get("sort_module_attributes", True)
     start_with_newline = settings.get("start_with_newline", "")
+    force_default_qstyle = settings.get("force_default_qstyle", True)
+    if not default_qstyle or force_default_qstyle:
+        default_qstyle = settings.get("default_qstyle", '"""')
+
+    target = find_preceding_declaration(view, all_defs, region)
+    # print("TARGET::", target)
+    _module_flag = (target.a == target.b == 0)
+    # print("-> found target", target, _module_flag)
+
+    old_ds_info = get_docstring(view, edit, target,
+                                default_qstyle=default_qstyle)
+    old_ds_whole_region, old_ds_region, quote_style, is_new = old_ds_info
+
+    old_docstr = view.substr(old_ds_region)
 
     ds = docstring_styles.make_docstring_obj(old_docstr, desired_style,
                                              template_order=template_order)
@@ -864,7 +869,7 @@ def is_python_file(view):
     return False
 
 class AutoDocstringCommand(sublime_plugin.TextCommand):
-    def run(self, edit):
+    def run(self, edit, default_qstyle=None):
         """Insert/Revise docstring for the scope of the cursor location
 
         Args:
@@ -883,7 +888,8 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
             # print("DEFS::", defs)
 
             for region in view.sel():
-                autodoc(view, edit, region, defs, desired_style, file_type)
+                autodoc(view, edit, region, defs, desired_style, file_type,
+                        default_qstyle=default_qstyle)
         except Exception:
             sublime.status_message("AutoDocstring is confused :-S, check "
                                    "console")
@@ -894,7 +900,7 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
 
 
 class AutoDocstringAllCommand(sublime_plugin.TextCommand):
-    def run(self, edit):
+    def run(self, edit, default_qstyle=None):
         """Insert/Revise docstrings whole module
 
         Args:
@@ -914,7 +920,8 @@ class AutoDocstringAllCommand(sublime_plugin.TextCommand):
                 defs = find_all_declarations(view, True)
                 d = defs[i]
                 region = sublime.Region(d.b, d.b)
-                autodoc(view, edit, region, defs, desired_style, file_type)
+                autodoc(view, edit, region, defs, desired_style, file_type,
+                        default_qstyle=default_qstyle)
         except Exception:
             sublime.status_message("AutoDocstring is confused :-S, check "
                                    "console")
@@ -922,6 +929,29 @@ class AutoDocstringAllCommand(sublime_plugin.TextCommand):
         else:
             sublime.status_message("AutoDoc'ed :-)")
         return None
+
+class AutoDocstringSnipCommand(sublime_plugin.TextCommand):
+    def run(self, edit):
+        """Insert/Revise docstring for the scope of the cursor location
+
+        Args:
+            edit (type): Description
+        """
+        view = self.view
+        pt = view.sel()[0].a
+        regA = sublime.Region(pt - 3, pt)
+        qstyleA = view.substr(regA)
+        assert qstyleA in ['"""', "'''"]
+        view.replace(edit, regA, "")
+
+        regB = sublime.Region(pt - 6, pt - 3)
+        qstyleB = view.substr(regB)
+        if qstyleB in ['"""', "'''"]:
+            view.replace(edit, regB, "")
+
+        args = {}
+        args["default_qstyle"] = qstyleA
+        view.window().run_command("auto_docstring", args)
 
 ##
 ## EOF

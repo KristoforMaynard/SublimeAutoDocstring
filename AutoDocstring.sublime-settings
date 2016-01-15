@@ -14,5 +14,7 @@
   "style": "auto_google",
   "template_order": false,
   "use_snippet": true,
-  "start_with_newline": ""
+  "start_with_newline": "",
+  "force_default_qstyle": true,
+  "default_qstyle": "\"\"\""
 }
