@@ -19,7 +19,6 @@ import sublime_plugin
 
 from . import docstring_styles
 
-_SETTINGS_FNAME = "AutoDocstring.sublime-settings"
 
 __class_re = r"(class)\s+([^\s\(\):]+)\s*(\(([\s\S]*?)\))?"
 __func_re = r"(def)\s+([^\s\(\):]+)\s*\(([\s\S]*?)\)"
@@ -27,6 +26,22 @@ __func_re = r"(def)\s+([^\s\(\):]+)\s*\(([\s\S]*?)\)"
 _all_decl_re = r"^[^\S\n]*({0}|{1})\s*:".format(__class_re, __func_re)
 _class_decl_re = r"^[^\S\n]*{0}\s*:".format(__class_re)
 _func_decl_re = r"^[^\S\n]*{0}\s*:".format(__func_re)
+
+class Settings(object):
+    def __init__(self, view=None):
+        _sname = "AutoDocstring"
+        _sfile = "AutoDocstring.sublime-settings"
+        self.project_settings = {}
+        if view:
+            proj_dat = view.window().project_data()
+            if proj_dat:
+                self.project_settings = proj_dat.get(_sname, {})
+        self.plugin_settings = sublime.load_settings(_sfile)
+
+    def get(self, key, default=None):
+        val = self.plugin_settings.get(key, default)
+        val = self.project_settings.get(key, val)
+        return val
 
 def find_all_declarations(view, include_module=False):
     """Find all complete function/class declarations
@@ -432,7 +447,7 @@ def get_desired_style(view, default="google"):
         subclass of docstring_styles.Docstring, for now only
         Google or Numpy
     """
-    s = sublime.load_settings(_SETTINGS_FNAME)
+    s = Settings(view=view)
     style = s.get("style", "auto_google").lower()
 
     # do we want to auto-discover from the buffer?
@@ -719,7 +734,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
         desired_style (class): subclass of Docstring
         file_type (str): 'python' or 'cython', not yet used
     """
-    settings = sublime.load_settings(_SETTINGS_FNAME)
+    settings = Settings(view=view)
     template_order = settings.get("template_order", False)
     optional_tag = settings.get("optional_tag", "optional")
     default_description = settings.get("default_description", "Description")

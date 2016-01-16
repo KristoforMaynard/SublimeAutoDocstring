@@ -24,7 +24,7 @@ Usage
 Settings
 --------
 
-  A shortcut to open the settings file is in menu under `Preferences/Package Settings/AutoDocstring/Settings - User`
+  A shortcut to open the settings file is in menu under `Preferences/Package Settings/AutoDocstring/Settings - User`. Settings can also be in a JSON hash (dictionary) called "AutoDocstring" in a project-settings file. Project settings will override package settings.
 
   - `default_description` *(default="Description")*: Filler text for descriptions
   - `default_return_name` *(default="name")*: Numpy style only. Default parameter name for return values. Set as an empty string to leave return values unnamed.
