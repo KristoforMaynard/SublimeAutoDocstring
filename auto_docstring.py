@@ -877,8 +877,8 @@ def is_python_file(view):
     if ext in ['.py', '.pyx', '.pxd']:
         return True
 
-    syntax = view.settings().get('syntax')
-    if "Python" in syntax or "Cython" in syntax:
+    syntax = view.settings().get('syntax').lower()
+    if "python" in syntax or "cython" in syntax:
         return True
 
     return False
