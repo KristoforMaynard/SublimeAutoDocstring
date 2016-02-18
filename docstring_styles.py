@@ -573,6 +573,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         # go through params that are no linger in the arguments list and
         # move them from the Parameters section of the docstring to the
         # deleted parameters section
+        if '' in current_dict:
+            del current_dict['']
         if len(current_dict):
             del_sec_name = del_prefix + sec_name
             del_sec_alias = del_prefix + sec_alias
@@ -723,10 +725,12 @@ class NumpyDocstring(NapoleonDocstring):
 
         for i, heading_ind in enumerate(heading_inds[1:], 1):
             text = s[heading_inds[i - 1][1]:heading_ind[0]]
-            if text[:1] == '\n':
-                text = text[1:]
-            elif text[:2] == '\r\n':
-                text = text[2:]
+            # Evidently leading newlines are sometimes desirable for numpy
+            if section_titles[i - 1] != "Summary":
+                if text[:1] == '\n':
+                    text = text[1:]
+                elif text[:2] == '\r\n':
+                    text = text[2:]
             section_texts.append(text.rstrip())
 
         for title, text in zip(section_titles, section_texts):
