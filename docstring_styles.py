@@ -175,6 +175,15 @@ class Section(object):
         self.meta = kwargs
 
     @classmethod
+    def from_section(cls, sec):
+        new_sec = cls(sec.heading, text=sec.text,
+                      indent=sec.indent, first_indend=sec.first_indent,
+                      **sec.meta)
+        if hasattr(sec, "args"):
+            new_sec.args = sec.args
+        return new_sec
+
+    @classmethod
     def resolve_alias(cls, heading):
         """"""
         heading = heading.title()
@@ -429,6 +438,13 @@ class Docstring(object):
         """
         if isinstance(docstr, Docstring):
             self.sections = docstr.sections
+            if not isinstance(docstr, type(self)):
+                # fixme, this is kinda hacky
+                make_new_sec = self.SECTION_STYLE.from_section
+                for sec_name, sec in docstr.sections.items():
+                    docstr.sections[sec_name] = make_new_sec(sec)
+                if "Parameters" in docstr.sections:
+                    self.sections["Parameters"].heading = self.PREFERRED_PARAMS_ALIAS
         elif isinstance(docstr, string_types):
             if template_order:
                 self.sections = self.TEMPLATE.copy()
