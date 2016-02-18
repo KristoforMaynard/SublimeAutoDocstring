@@ -21,11 +21,12 @@ from . import docstring_styles
 
 
 __class_re = r"(class)\s+([^\s\(\):]+)\s*(\(([\s\S]*?)\))?"
-__func_re = r"(def)\s+([^\s\(\):]+)\s*\(([\s\S]*?)\)"
+__func_re = r"(def)\s+([^\s\(\):]+)\s*\(([\s\S]*?)\)\s*(->.*?)?"
 
 _all_decl_re = r"^[^\S\n]*({0}|{1})\s*:".format(__class_re, __func_re)
 _class_decl_re = r"^[^\S\n]*{0}\s*:".format(__class_re)
 _func_decl_re = r"^[^\S\n]*{0}\s*:".format(__func_re)
+
 
 class Settings(object):
     def __init__(self, view=None):
@@ -784,7 +785,9 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     else:
         decl_str = view.substr(target).lstrip()
         if decl_str.startswith('def'):
-            typ, name, args = re.match(_func_decl_re, decl_str).groups()
+            typ, name, args, ret_ano = re.match(_func_decl_re, decl_str).groups()
+            if not ret_ano:
+                ret_ano = ""
         elif decl_str.startswith('class'):
             typ, name, _, args = re.match(_class_decl_re, decl_str).groups()
         else:
@@ -897,6 +900,8 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
             if not file_type:
                 raise TypeError("Not a python file")
 
+            SyntaxManager.set_syntax(view)
+
             desired_style = get_desired_style(view)
 
             defs = find_all_declarations(view, True)
@@ -911,6 +916,8 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
             raise
         else:
             sublime.status_message("AutoDoc'ed :-)")
+
+        SyntaxManager.reset_syntax(view)
         return None
 
 
@@ -928,6 +935,8 @@ class AutoDocstringAllCommand(sublime_plugin.TextCommand):
             if not file_type:
                 raise TypeError("Not a python file")
 
+            SyntaxManager.set_syntax(view)
+
             desired_style = get_desired_style(view)
 
             defs = find_all_declarations(view, True)
@@ -943,6 +952,8 @@ class AutoDocstringAllCommand(sublime_plugin.TextCommand):
             raise
         else:
             sublime.status_message("AutoDoc'ed :-)")
+
+        SyntaxManager.reset_syntax(view)
         return None
 
 class AutoDocstringSnipCommand(sublime_plugin.TextCommand):
@@ -967,6 +978,36 @@ class AutoDocstringSnipCommand(sublime_plugin.TextCommand):
         args = {}
         args["default_qstyle"] = qstyleA
         view.window().run_command("auto_docstring", args)
+
+
+class SyntaxManager(object):
+    """Manages the state of the syntax highlighting
+
+    This is kind of a hack for return annotations b/c the default
+    python grammar falls apart when annotations are present
+    """
+    _old_syntax = None
+
+    @classmethod
+    def set_syntax(cls, view):
+        cls._old_syntax = view.settings().get("syntax")
+
+        keep_syntax = (cls._old_syntax.endswith("MagicPython.tmLanguage") or
+                       "cython" in cls._old_syntax.lower())
+        if keep_syntax:
+            cls._old_syntax = None
+        else:
+            pth0 = "Packages/SublimeAutoDocstring/"
+            pth0_full = sublime.packages_path() + '/../' + pth0
+            if not os.path.isdir(pth0_full):
+                pth0 = "Packages/AutoDocstring/"
+            view.set_syntax_file(pth0 + "ADMagicPython.hidden-tmLanguage")
+
+    @classmethod
+    def reset_syntax(cls, view):
+        if cls._old_syntax:
+            view.set_syntax_file(cls._old_syntax)
+        cls._old_syntax = None
 
 ##
 ## EOF
