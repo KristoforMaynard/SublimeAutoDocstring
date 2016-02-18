@@ -502,12 +502,14 @@ def parse_function_params(s, default_type, default_description,
     # pretend the args go to a lambda func, then get an ast for the lambda
     s = s.replace("\r\n", "")
     s = s.replace("\n", "")
-    tree = ast.parse("lambda {0}: None".format(s), mode='eval')
+    tree = ast.parse("def f({0}) {1}: return None".format(s, ""))
+    fdef = tree.body[0]
+
     try:
-        arg_ids = [arg.arg for arg in tree.body.args.args]
+        arg_ids = [arg.arg for arg in fdef.args.args]
     except AttributeError:
-        arg_ids = [arg.id for arg in tree.body.args.args]
-    default_nodes = tree.body.args.defaults
+        arg_ids = [arg.id for arg in fdef.args.args]
+    default_nodes = fdef.args.defaults
 
     if len(arg_ids) and (arg_ids[0] == "self" or arg_ids[0] == "cls"):
         if len(default_nodes) == len(arg_ids):
@@ -519,7 +521,7 @@ def parse_function_params(s, default_type, default_description,
     kwargs_end = len(arg_ids)
     defaults = [default_type] * kwargs_begin + default_nodes
 
-    for arg, default in zip(tree.body.args.kwonlyargs, tree.body.args.kw_defaults):
+    for arg, default in zip(fdef.args.kwonlyargs, fdef.args.kw_defaults):
         try:
             arg_ids.append(arg.arg)
         except AttributeError:
@@ -529,18 +531,18 @@ def parse_function_params(s, default_type, default_description,
             default = default_type
         defaults.append(default)
 
-    if tree.body.args.vararg:
+    if fdef.args.vararg:
         try:
-            name = tree.body.args.vararg.arg
+            name = fdef.args.vararg.arg
         except AttributeError:
-            name = tree.body.args.vararg
+            name = fdef.args.vararg
         arg_ids.append("*{0}".format(name))
         defaults.append(None)
-    if tree.body.args.kwarg:
+    if fdef.args.kwarg:
         try:
-            name = tree.body.args.kwarg.arg
+            name = fdef.args.kwarg.arg
         except AttributeError:
-            name = tree.body.args.kwarg
+            name = fdef.args.kwarg
         arg_ids.append("**{0}".format(name))
         defaults.append(None)
 
