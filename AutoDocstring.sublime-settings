@@ -7,6 +7,7 @@
   "inspect_exceptions": true,
   "inspect_function_parameters": true,
   "inspect_module_attributes": true,
+  "keep_previous": false,
   "optional_tag": "optional",
   "sort_class_attributes": true,
   "sort_exceptions": true,

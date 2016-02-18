@@ -750,6 +750,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     sort_module_attributes = settings.get("sort_module_attributes", True)
     start_with_newline = settings.get("start_with_newline", "")
     force_default_qstyle = settings.get("force_default_qstyle", True)
+    keep_previous = settings.get("keep_previous", False)
     if not default_qstyle or force_default_qstyle:
         default_qstyle = settings.get("default_qstyle", '"""')
 
@@ -852,6 +853,13 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
             b_loc = new_docstr.find(r"}", loc)
             new_docstr = new_docstr[:b_loc] + new_docstr[b_loc + 1:]
         i += 1
+
+    if keep_previous:
+        new_docstr = ("{0}\n"
+                      "******* PREVIOUS DOCSTRING *******\n"
+                      "{1}\n"
+                      "^^^^^^^ PREVIOUS DOCSTRING ^^^^^^^\n"
+                      "".format(new_docstr, old_docstr))
 
     # actually insert the new docstring
     if use_snippet:
