@@ -896,6 +896,7 @@ def is_python_file(view):
 
     return False
 
+
 class AutoDocstringCommand(sublime_plugin.TextCommand):
     def run(self, edit, default_qstyle=None):
         """Insert/Revise docstring for the scope of the cursor location
@@ -965,6 +966,7 @@ class AutoDocstringAllCommand(sublime_plugin.TextCommand):
 
         SyntaxManager.reset_syntax(view)
         return None
+
 
 class AutoDocstringSnipCommand(sublime_plugin.TextCommand):
     def run(self, edit):
