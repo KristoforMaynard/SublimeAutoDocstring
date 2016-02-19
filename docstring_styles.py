@@ -64,18 +64,32 @@ def dedent_docstr(s, n=1):
         n (int): number of lines to skip, (n == 0 is a normal dedent,
             n == 1 is useful for whole docstrings)
     """
-    lines = s.splitlines()
+    lines = s.splitlines(keepends=True)
     if lines:
-        ret = dedent("\n".join(lines[n:]))
-        if n == 0:
-            return ret
-        else:
-            first_n_lines = "\n".join([l.lstrip() for l in lines[:n]])
-            return first_n_lines + "\n" + ret
+        first_n_lines = "".join([l.lstrip(' \t') for l in lines[:n]])
+        dedented = dedent("".join(lines[n:]))
+        return first_n_lines + dedented
     else:
         return ""
 
-def indent_docstr(s, indent):
+def dedent_verbose(s, n=1):
+    new = dedent_docstr(s)
+
+    s_split = s.splitlines(keepends=True)
+    new_split = new.splitlines(keepends=True)
+    i, ind = 0, -1
+    for i in range(n, len(s_split)):
+        if s_split[i].strip():
+            ind = s_split[i].find(new_split[i])
+            break
+    if ind >= 0:
+        indent = s_split[i][:ind]
+    else:
+        indent = ""
+
+    return indent, new
+
+def indent_docstr(s, indent, n=1):
     """Add common indentation to all lines except first
 
     Args:
@@ -86,20 +100,11 @@ def indent_docstr(s, indent):
     Returns:
         s with common indentation applied
     """
-    lines = s.splitlines()
-    if len(lines) == 0:
-        return ""
-
-    for i in range(1, len(lines)):
+    lines = s.splitlines(keepends=True)
+    for i in range(n, len(lines)):
         lines[i] = "{0}{1}".format(indent, lines[i])
+    return "".join(lines)
 
-    if len(lines) > 1 and not lines[-1].strip() == "":
-        lines.append(indent)
-    ret = lines[0]
-    if len(lines) > 1:
-        ret += "\n" + "\n".join(lines[1:])
-
-    return ret
 
 
 class Parameter(object):
@@ -108,15 +113,18 @@ class Parameter(object):
     types = None
     description = None
     tag = None
+    descr_only = None
     meta = None
 
-    def __init__(self, names, types, description, tag=None, **kwargs):
+    def __init__(self, names, types, description, tag=None, descr_only=False,
+                 **kwargs):
         """
         Args:
             names (list): list of names
             types (str): string describing data types
             description (str): description text
             tag (int): some meaningful index? not fleshed out yet
+            descr_only (bool): only description is useful
             **kwargs: Description
         """
         assert names is not None
@@ -126,6 +134,7 @@ class Parameter(object):
         self.types = types
         self.description = description
         self.tag = tag
+        self.descr_only = descr_only
         self.meta = kwargs
 
 
@@ -178,9 +187,10 @@ class Section(object):
 
     @classmethod
     def from_section(cls, sec):
-        new_sec = cls(sec.heading, text=sec.text,
-                      indent=sec.indent, first_indend=sec.first_indent,
-                      **sec.meta)
+        new_sec = cls(sec.heading)
+        new_sec._text = sec._text
+        new_sec.indent = sec.indent
+        new_sec.first_indent = sec.first_indent
         if hasattr(sec, "args"):
             new_sec.args = sec.args
         return new_sec
@@ -227,6 +237,24 @@ class NapoleonSection(Section):
                "Warnings": "Warning"
               }
 
+    def param_parser_common(self, text):
+        # NOTE: there will be some tricky business if there is a
+        # section break done by "resuming unindented text"
+        param_list = []
+        param_dict = OrderedDict()
+        text = dedent_docstr(text, 0)
+        s = ""
+
+        _r = r"^\S[^\r\n]*(?:\n[^\S\n]+\S[^\r\n]*|\n)*"
+        param_blocks = re.findall(_r, text, re.MULTILINE)
+        for block in param_blocks:
+            param = self.finalize_param(block, len(param_list))
+            param_list.append(param)
+            for name in param.names:
+                param_dict[name] = param
+        return param_dict
+
+
 class GoogleSection(NapoleonSection):
     """"""
     first_indent = "    "  # 1st indent is only 2 spaces according to the style
@@ -239,57 +267,46 @@ class GoogleSection(NapoleonSection):
             s (type): Description
             tag (int): index of param? not fleshed out yet
         """
-        if not ":" in s:
-            s += ":"
-        m = re.match(r"(.*?)\s*(?:\((.*)\))?\s*:\s*(.*)", s, re.DOTALL)
-        groups = m.groups()
-        names = [n.strip() for n in groups[0].split(',')]
-        types = groups[1]
-        descr = groups[2]
-        return Parameter(names, types, descr, tag=tag)
+        meta = {}
+        _r = r"([^,\s]+(?:\s*,\s*[^,\s]+)*\s*)(?:\((.*)\))?\s*:\s*(.*)"
+        m = re.match(_r, s, re.DOTALL | re.MULTILINE)
+        if m:
+            names, typ, descr = m.groups()
+            names = [n.strip() for n in names.split(',')]
+            meta['indent'], descr = dedent_verbose(descr, n=1)
+            descr_only = False
+        else:
+            names = ["{0}".format(tag)]
+            typ = ""
+            descr = s
+            descr_only = True
+        return Parameter(names, typ, descr, tag=tag, descr_only=descr_only, **meta)
 
     def param_parser(self, text):
-        """
-        Args:
-            text (type): Description
-        """
-        param_dict = OrderedDict()
-        param_list = []
-        text = dedent_docstr(text, 0)
-        s = ""
-        for line in text.splitlines():
-            if line and line[0] not in string.whitespace:
-                if s:
-                    param = self.finalize_param(s, len(param_list))
-                    param_list.append(param)
-                    for name in param.names:
-                        param_dict[name] = param
-                s = (line + "\n")
-            else:
-                s += (line + "\n")
-        if s:
-            param = self.finalize_param(s, len(param_list))
-            param_list.append(param)
-            for name in param.names:
-                param_dict[name] = param
-        return param_dict
+        return self.param_parser_common(text)
 
     def param_formatter(self):
         """"""
         s = ""
         for param in self.args.values():
-            if len(param.names) > 1:
-                print("WARNING: Google docstrings don't allow > 1 parameter "
-                      "per description")
-            p = "{0}".format(", ".join(param.names))
-            if param.types:
-                types = param.types.strip()
-                if types:
-                    p += " ({0})".format(types)
-            if param.description:
-                p += ": {0}".format(param.description.rstrip())
-            p += '\n'
-            s += p
+            if param.descr_only:
+                s += param.description
+            else:
+                if len(param.names) > 1:
+                    print("WARNING: Google docstrings don't allow > 1 "
+                          "parameter per description")
+                p = "{0}".format(", ".join(param.names))
+                if param.types:
+                    types = param.types.strip()
+                    if types:
+                        p += " ({0})".format(types)
+                if param.description:
+                    desc = indent_docstr(param.description,
+                                         param.meta.get("indent", self.indent))
+                    p += ": {0}".format(desc.rstrip(' '))
+                if p[-1] != '\n':
+                    p += '\n'
+                s += p
 
         lines = [self.first_indent + line for line in s.splitlines()]
         s = "\n".join(lines)
@@ -323,43 +340,26 @@ class NumpySection(NapoleonSection):
 
     @staticmethod
     def finalize_param(s, i):
-        """
-        Args:
-            s (type): Description
-        """
-        m = re.match(r"(.*?)\s*(?::\s*(.*?))?\s*?\n(.*)", s, re.DOTALL)
-        name, typ, desc = m.groups()
-        # FIXME hack, name for numpy parameters is always a list of names
-        # to support the multiple parameters per description option in
-        # numpy docstrings
-        name = [n.strip() for n in name.split(',')]
-        desc = dedent_docstr(desc, 0)
-        return Parameter(name, typ, desc, i)
+        meta = {}
+        _r = r"\s*([^,\s]+(?:\s*,\s*[^,\s]+)*)\s*(?::\s*(.*?))?[^\S\n]*?\n(\s+.*)"
+        m = re.match(_r, s, re.DOTALL)
+        if m:
+            names, typ, desc = m.groups()
+            # FIXME hack, name for numpy parameters is always a list of names
+            # to support the multiple parameters per description option in
+            # numpy docstrings
+            names = [n.strip() for n in names.split(',')]
+            meta['indent'], descr = dedent_verbose(desc, 0)
+            descr_only = False
+        else:
+            names = ["{0}".format(i)]
+            typ = ""
+            descr = s
+            descr_only = True
+        return Parameter(names, typ, descr, tag=i, descr_only=descr_only, **meta)
 
     def param_parser(self, text):
-        """"""
-        # NOTE: there will be some tricky business if there is a
-        # section break done by "resuming unindented text"
-        param_list = []
-        param_dict = OrderedDict()
-        text = dedent_docstr(text, 0)
-        s = ""
-        for line in text.splitlines():
-            if line and line[0] not in string.whitespace:
-                if s:
-                    param = self.finalize_param(s, len(param_list))
-                    param_list.append(param)
-                    for name in param.names:
-                        param_dict[name] = param
-                s = (line + "\n")
-            else:
-                s += (line + "\n")
-        if s:
-            param = self.finalize_param(s, len(param_list))
-            param_list.append(param)
-            for name in param.names:
-                param_dict[name] = param
-        return param_dict
+        return self.param_parser_common(text)
 
     def param_formatter(self):
         """"""
@@ -368,19 +368,23 @@ class NumpySection(NapoleonSection):
         s = ""
         # already_seen = {}
         for param in self.args.values():
-            p = "{0}".format(", ".join(param.names))
-            if param.types:
-                types = param.types.strip()
-                if types:
-                    p += " : {0}".format(types)
-            p += "\n"
-            if param.description:
-                desc = param.description.rstrip()
-                lines = [self.first_indent + line for line in desc.splitlines()]
-                if len(lines) == 0 or not lines[-1].strip() == "":
-                    lines.append("")
-                p += "\n".join(lines)
-            s += p
+            if param.descr_only:
+                s += param.description
+            else:
+                p = "{0}".format(", ".join(param.names))
+                if param.types:
+                    types = param.types.strip()
+                    if types:
+                        p += " : {0}".format(types)
+                p += "\n"
+                if param.description:
+                    desc = indent_docstr(param.description,
+                                         param.meta.get("indent", self.indent),
+                                         n=0)
+                    p += desc.rstrip(' ')
+                if p[-1] != '\n':
+                    p += '\n'
+                s += p
         return s
 
     PARSERS = {"Parameters": (param_parser,
@@ -571,11 +575,19 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             if param:
                 new[name] = param
 
+        # add description only parameters back in
+        for key, param in current_dict.items():
+            if param.descr_only:
+                # param.description = '\n' + param.description
+                new[key] = current_dict.pop(key)
+
+        # not sure when this guy gets created
+        if '' in current_dict:
+            del current_dict['']
+
         # go through params that are no linger in the arguments list and
         # move them from the Parameters section of the docstring to the
         # deleted parameters section
-        if '' in current_dict:
-            del current_dict['']
         if len(current_dict):
             del_sec_name = del_prefix + sec_name
             del_sec_alias = del_prefix + sec_alias
