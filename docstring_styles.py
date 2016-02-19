@@ -146,6 +146,8 @@ class Section(object):
     indent = "    "
     meta = None
 
+    formatter_override = None
+
     def __init__(self, heading, text="", indent=None, first_indent=None,
                  **kwargs):
         """
@@ -195,7 +197,9 @@ class Section(object):
     @property
     def text(self):
         """"""
-        if self.args_formatter is not None:
+        if self.formatter_override is not None:
+            s = self.formatter_override(self)  # pylint: disable=not-callable
+        elif self.args_formatter is not None:
             s = self.args_formatter(self)
         else:
             s = self._text
@@ -291,17 +295,6 @@ class GoogleSection(NapoleonSection):
         s = "\n".join(lines)
         return s
 
-    def returns_parser(self, text):  # pylint: disable=no-self-use
-        """
-        Args:
-            text (type): Description
-        """
-        return text
-
-    def returns_formatter(self):
-        """"""
-        return self.args
-
     PARSERS = {"Parameters": (param_parser,
                               param_formatter),
                "Other Parameters": (param_parser,
@@ -318,8 +311,8 @@ class GoogleSection(NapoleonSection):
                           param_formatter),
                "No Longer Raises": (param_parser,
                                     param_formatter),
-               "Returns": (returns_parser,
-                           returns_formatter),
+               "Returns": (param_parser,
+                           param_formatter),
               }
 
 
@@ -390,14 +383,6 @@ class NumpySection(NapoleonSection):
             s += p
         return s
 
-    def returns_parser(self, text):  # pylint: disable=no-self-use
-        """"""
-        return text
-
-    def returns_formatter(self):
-        """"""
-        return self.args
-
     PARSERS = {"Parameters": (param_parser,
                               param_formatter),
                "Other Parameters": (param_parser,
@@ -414,8 +399,8 @@ class NumpySection(NapoleonSection):
                           param_formatter),
                "No Longer Raises": (param_parser,
                                     param_formatter),
-               "Returns": (returns_parser,
-                           returns_formatter),
+               "Returns": (param_parser,
+                           param_formatter),
               }
 
 
@@ -706,6 +691,7 @@ class GoogleDocstring(NapoleonDocstring):
             else:
                 text = "    {0}: {1}".format(typ, description)
             self.finalize_section("Returns", text)
+            self.sections["Returns"].formatter_override = lambda s: s._text
 
 
 class NumpyDocstring(NapoleonDocstring):
@@ -782,6 +768,7 @@ class NumpyDocstring(NapoleonDocstring):
             else:
                 text = "{0}\n    {1}".format(typ, description)
             self.finalize_section("Returns", text)
+            self.sections["Returns"].formatter_override = lambda s: s._text
 
 
 STYLE_LOOKUP = OrderedDict([('numpy', NumpyDocstring),
