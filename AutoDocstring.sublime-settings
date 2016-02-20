@@ -1,6 +1,6 @@
 {
   "default_description": "Description",
-  "default_return_name": "name",
+  "default_return_name": "",
   "default_summary": "Summary",
   "default_type": "TYPE",
   "inspect_class_attributes": true,

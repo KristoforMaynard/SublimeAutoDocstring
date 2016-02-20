@@ -741,7 +741,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     template_order = settings.get("template_order", False)
     optional_tag = settings.get("optional_tag", "optional")
     default_description = settings.get("default_description", "Description")
-    default_return_name = settings.get("default_return_name", "name")
+    default_return_name = settings.get("default_return_name", "")
     default_summary = settings.get("default_summary", "Summary")
     default_type = settings.get("default_type", "TYPE")
     use_snippet = settings.get("use_snippet", False)
