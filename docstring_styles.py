@@ -4,7 +4,6 @@
 # TODO: break this module up into smaller pieces
 
 import sys
-import string
 import re
 from textwrap import dedent
 from collections import OrderedDict
@@ -105,6 +104,28 @@ def indent_docstr(s, indent, n=1):
         lines[i] = "{0}{1}".format(indent, lines[i])
     return "".join(lines)
 
+def count_leading_newlines(s):
+    """count number of leading newlines
+
+    this includes newlines that are separated by other whitespace
+    """
+    return s[:-len(s.lstrip())].count('\n')
+
+def count_trailing_newlines(s):
+    """count number of trailing newlines
+
+    this includes newlines that are separated by other whitespace
+    """
+    return s[len(s.rstrip()):].count('\n')
+
+def with_bounding_newlines(s, nleading=0, ntrailing=0, nl='\n'):
+    """return s with at least # leading and # trailing newlines
+
+    this includes newlines that are separated by other whitespace
+    """
+    return "{0}{1}{2}".format(nl * (nleading - count_leading_newlines(s)),
+                              s,
+                              nl * (ntrailing - count_trailing_newlines(s)))
 
 
 class Parameter(object):
@@ -151,20 +172,18 @@ class Section(object):
     heading = None
     alias = None
     _text = None
-    first_indent = "    "
+    section_indent = ""
     indent = "    "
     meta = None
 
     formatter_override = None
 
-    def __init__(self, heading, text="", indent=None, first_indent=None,
-                 **kwargs):
+    def __init__(self, heading, text="", indent=None, **kwargs):
         """
         Args:
             heading (str): heading of the section (should be title case)
             text (str, optional): section text
             indent (str, optional): used by some formatters
-            first_indent (type): Description
         """
         self.heading = heading
         self.alias = self.resolve_alias(heading)
@@ -179,8 +198,6 @@ class Section(object):
 
         if indent is not None:
             self.indent = indent
-        if first_indent is not None:
-            self.first_indent = first_indent
 
         self.text = text
         self.meta = kwargs
@@ -188,9 +205,9 @@ class Section(object):
     @classmethod
     def from_section(cls, sec):
         new_sec = cls(sec.heading)
-        new_sec._text = sec._text
+        new_sec._text = sec._text  # pylint: disable=protected-access
+        # section_indent is not here on purpose
         new_sec.indent = sec.indent
-        new_sec.first_indent = sec.first_indent
         if hasattr(sec, "args"):
             new_sec.args = sec.args
         return new_sec
@@ -213,7 +230,7 @@ class Section(object):
             s = self.args_formatter(self)
         else:
             s = self._text
-        return s.rstrip() + "\n"
+        return s
 
     @text.setter
     def text(self, val):
@@ -221,7 +238,11 @@ class Section(object):
         val = val.rstrip()
         if self.args_parser is not None:
             self.args = self.args_parser(self, val)
-        self._text = val
+        else:
+            section_indent, self._text = dedent_verbose(val, n=0)
+            # don't overwrite section indent if val isn't indented
+            if section_indent:
+                self.section_indent = section_indent
 
 
 class NapoleonSection(Section):
@@ -243,7 +264,6 @@ class NapoleonSection(Section):
         param_list = []
         param_dict = OrderedDict()
         text = dedent_docstr(text, 0)
-        s = ""
 
         _r = r"^\S[^\r\n]*(?:\n[^\S\n]+\S[^\r\n]*|\n)*"
         param_blocks = re.findall(_r, text, re.MULTILINE)
@@ -257,7 +277,7 @@ class NapoleonSection(Section):
 
 class GoogleSection(NapoleonSection):
     """"""
-    first_indent = "    "  # 1st indent is only 2 spaces according to the style
+    section_indent = "  "
     indent = "    "
 
     @staticmethod
@@ -290,7 +310,7 @@ class GoogleSection(NapoleonSection):
         s = ""
         for param in self.args.values():
             if param.descr_only:
-                s += param.description
+                s += with_bounding_newlines(param.description, ntrailing=1)
             else:
                 if len(param.names) > 1:
                     print("WARNING: Google docstrings don't allow > 1 "
@@ -299,17 +319,12 @@ class GoogleSection(NapoleonSection):
                 if param.types:
                     types = param.types.strip()
                     if types:
-                        p += " ({0})".format(types)
+                        p = "{0} ({1})".format(p, types)
                 if param.description:
                     desc = indent_docstr(param.description,
                                          param.meta.get("indent", self.indent))
-                    p += ": {0}".format(desc.rstrip(' '))
-                if p[-1] != '\n':
-                    p += '\n'
-                s += p
-
-        lines = [self.first_indent + line for line in s.splitlines()]
-        s = "\n".join(lines)
+                    p = "{0}: {1}".format(p, desc)
+                s += with_bounding_newlines(p, ntrailing=1)
         return s
 
     PARSERS = {"Parameters": (param_parser,
@@ -335,7 +350,6 @@ class GoogleSection(NapoleonSection):
 
 class NumpySection(NapoleonSection):
     """"""
-    first_indent = "    "
     indent = "    "
 
     @staticmethod
@@ -369,22 +383,19 @@ class NumpySection(NapoleonSection):
         # already_seen = {}
         for param in self.args.values():
             if param.descr_only:
-                s += param.description
+                s += with_bounding_newlines(param.description, ntrailing=1)
             else:
                 p = "{0}".format(", ".join(param.names))
                 if param.types:
                     types = param.types.strip()
                     if types:
-                        p += " : {0}".format(types)
-                p += "\n"
+                        p = "{0} : {1}".format(p, param.types.strip())
+                p = with_bounding_newlines(p, ntrailing=1)
                 if param.description:
-                    desc = indent_docstr(param.description,
-                                         param.meta.get("indent", self.indent),
-                                         n=0)
-                    p += desc.rstrip(' ')
-                if p[-1] != '\n':
-                    p += '\n'
-                s += p
+                    p += indent_docstr(param.description,
+                                       param.meta.get("indent", self.indent),
+                                       n=0)
+                s += with_bounding_newlines(p, ntrailing=1)
         return s
 
     PARSERS = {"Parameters": (param_parser,
@@ -449,13 +460,12 @@ class Docstring(object):
         """
         raise NotImplementedError("_parse is an abstract method")
 
-    def format(self, top_indent, indent="    "):
+    def format(self, top_indent):
         """Format docstring into a string
 
         Parameters:
             top_indent (str): indentation added to all but the first
                 lines
-            indent (str): indent of subsections
 
         Returns:
             str: properly formatted
@@ -466,7 +476,7 @@ class Docstring(object):
         """"""
         raise NotImplementedError("update_parameters is an abstract method")
 
-    def add_dummy_returns(self, typ, description):
+    def add_dummy_returns(self, name, typ, description):
         raise NotImplementedError("add_dummy_returns is an abstract method")
 
     def finalize_section(self, heading, text):
@@ -511,6 +521,54 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                             ("Example", None),
                             ("Examples", None),
                            ])
+
+    @staticmethod
+    def _extract_section_name(sec_re_result):
+        return sec_re_result.strip()
+
+    def _parse(self, s):
+        """
+        Args:
+            s (type): Description
+        """
+        s = dedent_docstr(s)
+
+        sec_starts = [(m.start(), m.end(), m.string[m.start():m.end()])
+                      for m in re.finditer(self.SECTION_RE, s, re.MULTILINE)]
+
+        sec_starts.insert(0, (0, 0, "Summary"))
+        sec_starts.append((len(s), len(s), ""))
+
+        for current_sec, next_sec in zip(sec_starts[:-1], sec_starts[1:]):
+            sec_name = self._extract_section_name(current_sec[2])
+            sec_body = s[current_sec[1]:next_sec[0]]
+            self.finalize_section(sec_name, sec_body)
+
+    @staticmethod
+    def _format_section_text(heading, body):
+        raise NotImplementedError("This is an abstract method")
+
+    def format(self, top_indent):
+        """
+        Args:
+            top_indent (type): Description
+        """
+        s = ""
+        if self.section_exists("Summary"):
+            sec_text = self.sections["Summary"].text
+            if sec_text.strip():
+                s += with_bounding_newlines(sec_text, nleading=0, ntrailing=1)
+
+        for _, section in islice(self.sections.items(), 1, None):
+            if section is None:
+                continue
+            sec_body = indent_docstr(section.text, section.section_indent, n=0)
+            sec_text = self._format_section_text(section.heading, sec_body)
+            s += with_bounding_newlines(sec_text, nleading=1, ntrailing=1)
+
+        s = indent_docstr(s, top_indent)
+
+        return s
 
     def _update_section(self, params, sec_name, sec_alias=None,
                         del_prefix="Deleted ", alpha_order=False,
@@ -641,11 +699,21 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         self._update_section(attribs, "Raises", del_prefix="No Longer ",
                              alpha_order=alpha_order)
 
+    def add_dummy_returns(self, name, typ, description):
+        if not self.section_exists("Returns"):
+            sec = self.SECTION_STYLE("Returns")
+            if name:
+                sec.args = {name: Parameter([name], typ, description)}
+            else:
+                sec.args = {typ: Parameter([typ], "", description)}
+            self.sections["Returns"] = sec
+
+
 class GoogleDocstring(NapoleonDocstring):
     """"""
     STYLE_NAME = "google"
     SECTION_STYLE = GoogleSection
-    SECTION_RE = r"^[A-Za-z0-9][A-Za-z0-9 \t]*:\s*$"
+    SECTION_RE = r"^[A-Za-z0-9][A-Za-z0-9 \t]*:\s*$\r?\n?"
     PREFERRED_PARAMS_ALIAS = "Args"
 
     @classmethod
@@ -654,63 +722,20 @@ class GoogleDocstring(NapoleonDocstring):
         m = re.search(cls.SECTION_RE, docstr, re.MULTILINE)
         return m is not None
 
-    def _parse(self, s):
-        """
-        Args:
-            s (type): Description
-        """
-        s = dedent_docstr(s)
+    @staticmethod
+    def _extract_section_name(sec_re_result):
+        return sec_re_result.strip().rstrip(':').rstrip()
 
-        cur_section = "Summary"
-        cur_text = ""
-        for line in s.splitlines():
-            if re.search(self.SECTION_RE, line) is not None:
-                self.finalize_section(cur_section, cur_text)
-                cur_section = line.rstrip()[:-1]  # takes out ':'
-                cur_text = ""
-            else:
-                cur_text += line + '\n'
-        if cur_section.strip() != "":
-            self.finalize_section(cur_section, cur_text)
-
-    def format(self, top_indent, indent="    "):
-        """
-        Args:
-            top_indent (type): Description
-            indent (type): Description
-        """
-        s = ""
-        if self.section_exists("Summary"):
-            text = self.sections["Summary"].text
-            if len(text.strip()) > 0:
-                s += "{0}".format(text)
-
-        for _, section in islice(self.sections.items(), 1, None):
-            if section is None:
-                continue
-            s += "\n{0}:\n{1}".format(section.heading, section.text)
-
-        s = indent_docstr(s, top_indent)
-
-        return s
-
-    def add_dummy_returns(self, name, typ, description):
-        if not self.section_exists("Returns"):
-            if name:
-                # text = "    {0} ({1}): {2}".format(name, typ, description)
-                # print("Note: Google docstrings ignore name of return types")
-                text = "    {0}: {1}".format(typ, description)
-            else:
-                text = "    {0}: {1}".format(typ, description)
-            self.finalize_section("Returns", text)
-            self.sections["Returns"].formatter_override = lambda s: s._text
+    @staticmethod
+    def _format_section_text(heading, body):
+        return "{0}:\n{1}".format(heading, body)
 
 
 class NumpyDocstring(NapoleonDocstring):
     """"""
     STYLE_NAME = "numpy"
     SECTION_STYLE = NumpySection
-    SECTION_RE = r"^([A-Za-z0-9][A-Za-z0-9 \t]*)\s*\n-+\s*?$"
+    SECTION_RE = r"^([A-Za-z0-9][A-Za-z0-9 \t]*)\s*\n-+\s*?$\r?\n?"
     PREFERRED_PARAMS_ALIAS = "Parameters"
 
     @classmethod
@@ -719,68 +744,13 @@ class NumpyDocstring(NapoleonDocstring):
         m = re.search(cls.SECTION_RE, docstr, re.MULTILINE)
         return m is not None
 
-    def _parse(self, s):
-        """
-        Args:
-            s (type): Description
-        """
-        s = dedent_docstr(s)
+    @staticmethod
+    def _extract_section_name(sec_re_result):
+        return sec_re_result.strip().rstrip('-').rstrip()
 
-        heading_inds = []
-        section_titles = []
-        section_texts = []
-        for m in re.finditer(self.SECTION_RE, s, re.MULTILINE):
-            heading_inds.append((m.start(), m.end()))
-            section_titles.append(m.group(1).strip())
-
-        section_titles.insert(0, "Summary")
-        heading_inds.insert(0, (0, 0))
-        heading_inds.append((len(s), None))
-
-        for i, heading_ind in enumerate(heading_inds[1:], 1):
-            text = s[heading_inds[i - 1][1]:heading_ind[0]]
-            # Evidently leading newlines are sometimes desirable for numpy
-            if section_titles[i - 1] != "Summary":
-                if text[:1] == '\n':
-                    text = text[1:]
-                elif text[:2] == '\r\n':
-                    text = text[2:]
-            section_texts.append(text.rstrip())
-
-        for title, text in zip(section_titles, section_texts):
-            self.finalize_section(title, text)
-
-    def format(self, top_indent, indent="    "):
-        """
-        Args:
-            top_indent (type): Description
-            indent (type, optional): Description
-        """
-        s = ""
-        if self.section_exists("Summary"):
-            text = self.sections["Summary"].text
-            if len(text.strip()) > 0:
-                s += "{0}".format(text)
-
-        for _, section in islice(self.sections.items(), 1, None):
-            if section is None:
-                continue
-            title = section.heading
-            text = section.text
-            s += "\n{0}\n{1}\n{2}".format(title, "-"*len(title), text)
-
-        s = indent_docstr(s, top_indent)
-
-        return s
-
-    def add_dummy_returns(self, name, typ, description):
-        if not self.section_exists("Returns"):
-            if name:
-                text = "{0} : {1}\n    {2}".format(name, typ, description)
-            else:
-                text = "{0}\n    {1}".format(typ, description)
-            self.finalize_section("Returns", text)
-            self.sections["Returns"].formatter_override = lambda s: s._text
+    @staticmethod
+    def _format_section_text(heading, body):
+        return "{0}\n{1}\n{2}".format(heading, "-" * len(heading), body)
 
 
 STYLE_LOOKUP = OrderedDict([('numpy', NumpyDocstring),
