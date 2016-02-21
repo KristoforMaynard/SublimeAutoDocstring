@@ -1,0 +1,40 @@
+[
+  // This one triggers when hitting tab at the end of any extended string,
+  // this is not quite right, is it
+  // { "keys": ["tab"], "command": "auto_docstring_snip",
+  //   "context": [
+  //       { "key": "selection_empty", "operator": "equal", "operand": true,
+  //         "match_all": true },
+  //       { "key": "selector", "operator": "equal",
+  //         "operand": "(source.python|source.cython)", "match_all": true },
+  //       { "key": "preceding_text", "operator": "regex_contains",
+  //         "operand": "(\"\"\"|''')", "match_all": true }
+  //     ]
+  // },
+  // This one causes problems when hitting enter at the beginning or end
+  // of any docstring
+  // { "keys": ["enter"], "command": "auto_docstring_snip",
+  //   "context": [
+  //       { "key": "selection_empty", "operator": "equal", "operand": true,
+  //         "match_all": true },
+  //       { "key": "selector", "operator": "equal",
+  //         "operand": "(source.python|source.cython)", "match_all": true },
+  //       { "key": "preceding_text", "operator": "regex_contains",
+  //         "operand": "(\"\"\"|''')", "match_all": true }
+  //     ]
+  // },
+  // This won't trigger with > 1 line of arguments, i.e., if def/class and ):
+  // are not on the same line
+  // { "keys": ["enter"], "command": "auto_docstring",
+  //   "context": [
+  //       { "key": "selection_empty", "operator": "equal", "operand": true,
+  //         "match_all": true },
+  //       { "key": "selector", "operator": "equal",
+  //         "operand": "(source.python|source.cython)", "match_all": true },
+  //       { "key": "preceding_text", "operator": "regex_contains",
+  //         "operand": "\\):", "match_all": true },
+  //       { "key": "preceding_text", "operator": "regex_contains",
+  //         "operand": "(def|class)", "match_all": true }
+  //     ]
+  // },
+]
