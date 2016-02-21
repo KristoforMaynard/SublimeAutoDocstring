@@ -764,11 +764,11 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     _module_flag = (target.a == target.b == 0)
     # print("-> found target", target, _module_flag)
 
-    _edit = None if update_only else None
+    _edit = None if update_only else edit
     old_ds_info = get_docstring(view, _edit, target,
                                 default_qstyle=default_qstyle)
     old_ds_whole_region, old_ds_region, quote_style, is_new = old_ds_info
-    if old_ds_whole_region is None:
+    if update_only and old_ds_whole_region is None:
         return -1
 
     old_docstr = view.substr(old_ds_region)
