@@ -233,9 +233,9 @@ class Section(object):
     @classmethod
     def resolve_alias(cls, heading):
         """"""
-        heading = heading.title()
+        titled_heading = heading.title()
         try:
-            return cls.ALIASES[heading]
+            return cls.ALIASES[titled_heading]
         except KeyError:
             return heading
 
@@ -464,12 +464,12 @@ class Docstring(object):
 
                 # ok, this way of changing indentation is a thunder hack
                 if "Parameters" in docstr.sections:
-                    self.sections["Parameters"].heading = self.PREFERRED_PARAMS_ALIAS
-                    for arg in self.sections["Parameters"].args.values():
-                        arg.meta['indent'] = self.sections["Parameters"].indent
+                    self.get_section("Parameters").heading = self.PREFERRED_PARAMS_ALIAS
+                    for arg in self.get_section("Parameters").args.values():
+                        arg.meta['indent'] = self.get_section("Parameters").indent
                 if "Returns" in docstr.sections:
-                    for arg in self.sections["Returns"].args.values():
-                        arg.meta['indent'] = self.sections["Returns"].indent
+                    for arg in self.get_section("Returns").args.values():
+                        arg.meta['indent'] = self.get_section("Returns").indent
 
         elif isinstance(docstr, string_types):
             if template_order:
@@ -514,11 +514,28 @@ class Docstring(object):
         section = self.SECTION_STYLE(heading, text)
         self.sections[section.alias] = section
 
+    def get_section(self, section_name):
+        if section_name in self.sections:
+            return self.sections[section_name]
+        elif section_name in self.SECTION_STYLE.ALIASES:
+            alias = self.SECTION_STYLE.resolve_alias(section_name)
+            if alias in self.sections:
+                return self.sections[alias]
+        raise KeyError("Section '{0}' not found".format(section_name))
+
+
     def section_exists(self, section_name):
         """returns True iff section exists, and was finalized"""
+        sec = None
         if section_name in self.sections:
-            if self.sections[section_name] is not None:
-                return True
+            sec = self.sections[section_name]
+        elif section_name in self.SECTION_STYLE.ALIASES:
+            alias = self.SECTION_STYLE.resolve_alias(section_name)
+            if alias in self.sections:
+                sec = self.sections[alias]
+
+        if sec is not None:
+            return True
         return False
 
 
@@ -581,7 +598,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         """
         s = ""
         if self.section_exists("Summary"):
-            sec_text = self.sections["Summary"].text
+            sec_text = self.get_section("Summary").text
             if sec_text.strip():
                 s += with_bounding_newlines(sec_text, nleading=0, ntrailing=1)
 
@@ -625,8 +642,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         # exclude params that exist in them
         _other = []
         for _secname in other_sections:
-            if self.section_exists(self.SECTION_STYLE.resolve_alias(_secname)):
-                _other.append(self.sections[self.SECTION_STYLE.resolve_alias(_secname)])
+            if self.section_exists(_secname):
+                _other.append(self.get_section(_secname))
         other_sections = _other
 
         if alpha_order:
@@ -635,7 +652,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                 sorted_params[k] = params[k]
             params = sorted_params
 
-        current_dict = self.sections[sec_name].args
+        current_dict = self.get_section(sec_name).args
         # print("current::", current)
 
         # go through params in the order of the function declaration
@@ -681,7 +698,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             if not self.section_exists(self.SECTION_STYLE.resolve_alias(del_sec_name)):
                 self.finalize_section(del_sec_name, "")
 
-            deled_params = self.sections[self.SECTION_STYLE.resolve_alias(del_sec_name)]
+            deled_params = self.get_section(del_sec_name)
             deleted_tags = dict()
             for key, val in current_dict.items():
                 if key in deled_params.args:
