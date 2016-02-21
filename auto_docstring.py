@@ -437,17 +437,22 @@ def get_attr_type(value, default_type, existing_type):
 
     return ret
 
-def get_desired_style(view, default="google"):
+def get_desired_style(view, default="google", desire=None):
     """Get desired style / auto-discover from view if requested
 
     Args:
         view: ST view
         default (type, optional): Description
+        desire (str, optional): if desire is a valid style, then
+            always return that one
 
     Returns:
         subclass of docstring_styles.Docstring, for now only
         Google or Numpy
     """
+    if desire and desire.lower() in docstring_styles.STYLE_LOOKUP:
+        return docstring_styles.STYLE_LOOKUP[desire]
+
     s = Settings(view=view)
     style = s.get("style", "auto_google").lower()
 
@@ -724,7 +729,7 @@ def parse_module_attributes(view, default_type, default_description):
     return attribs
 
 def autodoc(view, edit, region, all_defs, desired_style, file_type,
-            default_qstyle=None):
+            default_qstyle=None, update_only=False):
     """actually do the business of auto-documenting
 
     Args:
@@ -759,9 +764,12 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     _module_flag = (target.a == target.b == 0)
     # print("-> found target", target, _module_flag)
 
-    old_ds_info = get_docstring(view, edit, target,
+    _edit = None if update_only else None
+    old_ds_info = get_docstring(view, _edit, target,
                                 default_qstyle=default_qstyle)
     old_ds_whole_region, old_ds_region, quote_style, is_new = old_ds_info
+    if old_ds_whole_region is None:
+        return -1
 
     old_docstr = view.substr(old_ds_region)
 
@@ -870,6 +878,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
         view.run_command('insert_snippet', {'contents': new_docstr})
     else:
         view.replace(edit, old_ds_region, new_docstr)
+    return 0
 
 def is_python_file(view):
     """Check if view is a python file
@@ -898,7 +907,7 @@ def is_python_file(view):
 
 
 class AutoDocstringCommand(sublime_plugin.TextCommand):
-    def run(self, edit, default_qstyle=None):
+    def run(self, edit, default_qstyle=None, to_style=None):
         """Insert/Revise docstring for the scope of the cursor location
 
         Args:
@@ -913,7 +922,7 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
 
             SyntaxManager.set_syntax(view)
 
-            desired_style = get_desired_style(view)
+            desired_style = get_desired_style(view, desire=to_style)
 
             defs = find_all_declarations(view, True)
             # print("DEFS::", defs)
@@ -927,13 +936,14 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
             raise
         else:
             sublime.status_message("AutoDoc'ed :-)")
+        finally:
+            SyntaxManager.reset_syntax(view)
 
-        SyntaxManager.reset_syntax(view)
         return None
 
 
 class AutoDocstringAllCommand(sublime_plugin.TextCommand):
-    def run(self, edit, default_qstyle=None):
+    def run(self, edit, default_qstyle=None, to_style=None, update_only=False):
         """Insert/Revise docstrings whole module
 
         Args:
@@ -948,7 +958,7 @@ class AutoDocstringAllCommand(sublime_plugin.TextCommand):
 
             SyntaxManager.set_syntax(view)
 
-            desired_style = get_desired_style(view)
+            desired_style = get_desired_style(view, desire=to_style)
 
             defs = find_all_declarations(view, True)
             for i in range(len(defs)):
@@ -956,15 +966,65 @@ class AutoDocstringAllCommand(sublime_plugin.TextCommand):
                 d = defs[i]
                 region = sublime.Region(d.b, d.b)
                 autodoc(view, edit, region, defs, desired_style, file_type,
-                        default_qstyle=default_qstyle)
+                        default_qstyle=default_qstyle, update_only=update_only)
         except Exception:
             sublime.status_message("AutoDocstring is confused :-S, check "
                                    "console")
             raise
         else:
             sublime.status_message("AutoDoc'ed :-)")
+        finally:
+            SyntaxManager.reset_syntax(view)
 
-        SyntaxManager.reset_syntax(view)
+        return None
+
+
+class AutoDocstringConvertCommand(sublime_plugin.TextCommand):
+    def run(self, edit, to_style=None):
+        """Insert/Revise docstrings whole module
+
+        Args:
+          edit (type): Description
+          to_style (str): Description
+        """
+        all_styles = list(docstring_styles.STYLE_LOOKUP.keys())
+        all_styles = [s.lower() for s in all_styles]
+        titled_styles = [s.title() for s in all_styles]
+        to_style = to_style.lower if to_style else to_style
+
+        if to_style in all_styles:
+            self.view.run_command("auto_docstring", dict(to_style=to_style))
+        else:
+            window = self.view.window()
+            def callback(i):
+                to_style = all_styles[i]
+                self.view.run_command("auto_docstring", dict(to_style=to_style))
+            window.show_quick_panel(titled_styles, callback, 0, 0, None)
+
+
+class AutoDocstringConvertAllCommand(sublime_plugin.TextCommand):
+    def run(self, edit, to_style=None):
+        """Revise all docstrings to conform to given style
+
+        Args:
+          edit (type): Description
+          to_style (str): Description
+        """
+        all_styles = list(docstring_styles.STYLE_LOOKUP.keys())
+        all_styles = [s.lower() for s in all_styles]
+        titled_styles = [s.title() for s in all_styles]
+        to_style = to_style.lower if to_style else to_style
+
+        if to_style in all_styles:
+            self.view.run_command("auto_docstring_all",
+                                  dict(to_style=to_style, update_only=True))
+        else:
+            window = self.view.window()
+            def callback(i):
+                to_style = all_styles[i]
+                self.view.run_command("auto_docstring_all",
+                                      dict(to_style=to_style, update_only=True))
+            window.show_quick_panel(titled_styles, callback, 0, 0, None)
         return None
 
 

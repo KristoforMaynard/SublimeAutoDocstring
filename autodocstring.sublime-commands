@@ -1,4 +1,8 @@
 [
   { "caption": "AutoDocstring: Current", "command": "auto_docstring" },
   { "caption": "AutoDocstring: All", "command": "auto_docstring_all" },
+  { "caption": "AutoDocstring: Convert ...",
+    "command": "auto_docstring_convert" },
+  { "caption": "AutoDocstring: Convert All ...",
+    "command": "auto_docstring_convert_all" },
 ]

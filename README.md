@@ -9,6 +9,7 @@ Features
 
   - Inspects function definitions and inserts a stub for each parameter
   - Inspects class / module attributes and inserts a stub for each
+  - Convert single docstrings or whole modules from one style to another with one command
   - Discovers what exceptions are raised in a function and inserts a stub for each
   - Rearranges parameters to reflect their order in the function definition
   - Automatically detects style: [Google](https://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_google.html "Example of Google Style")  or [Numpy](https://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_numpy.html "Example of Numpy Style")
@@ -16,10 +17,20 @@ Features
 Usage
 -----
 
+  Use these keyboard shortcuts, or the commands below from the Command Pallete.
+
   - <`cmd` + `alt` + `'`> will update a docstring for the first module/class/function preceding the cursor.
   - <`cmd` + `alt` + `shift` + `'`> will update docstrings for every class/method/function in the current file
 
   Note that on linux / windows, `ctrl` is used in place of `cmd`.
+
+Commands
+--------
+
+  - `AutoDocstring: Current`: Create or update the docstring for the next declaration that preceeds the cursor
+  - `AutoDocstring: All`: Create or update docstrings for all declarations in a module
+  - `AutoDocstring: Convert...`: Convert the docstring of the the next declaration that preceeds the cursor to a specific style
+  - `AutoDocstring: Convert All...`: Convert all existing docstrings in a module to a specific style
 
 Settings
 --------
