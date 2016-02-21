@@ -72,7 +72,7 @@ def dedent_docstr(s, n=1):
         return ""
 
 def dedent_verbose(s, n=1):
-    new = dedent_docstr(s)
+    new = dedent_docstr(s, n=n)
 
     s_split = s.splitlines(keepends=True)
     new_split = new.splitlines(keepends=True)
@@ -237,6 +237,8 @@ class Section(object):
     @text.setter
     def text(self, val):
         """"""
+        # i guess i'm not sure why val needs to be rstripped... this
+        # precludes adding extra blank space at the end of a section
         val = val.rstrip()
         if self.args_parser is not None:
             self.args = self.args_parser(self, val)
