@@ -277,7 +277,7 @@ class NapoleonSection(Section):
 
 class GoogleSection(NapoleonSection):
     """"""
-    section_indent = "  "
+    section_indent = "    "
     indent = "    "
 
     @staticmethod
