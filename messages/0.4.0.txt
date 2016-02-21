@@ -1,0 +1,12 @@
+New Features:
+  - Convert single docstrings or whole modules from one style to another with one command. See the `AutoDocstring: Convert...` and `AutoDocstring: Convert All...` commands.
+  - Settings can be in a JSON hash (dictionary) called "AutoDocstring" in a project-settings file. Project settings will override package settings.
+
+New Settings:
+  - `keep_previous` *(default=false)*: If true, then always append the existing docstring to the newly updated docstring. Could be useful for *processing legacy code*.
+
+Bugfixes:
+  - This plugin now ships with the MagicPython grammar, so return annotations don't completely break this plugin since we rely on syntax highlighting, and the default ST3 grammar doesn't support return annotations. This plugin always switches to MagicPython, runs, then switches back, so the end user shoun't even know the switch happened.
+  - Lots of bugs with newlines and indentation
+  - "Parameters" sections are now more flexable and support blocks of arbitrary text
+  - "Returns" sections are now formatted like Parameters
