@@ -127,6 +127,22 @@ def with_bounding_newlines(s, nleading=0, ntrailing=0, nl='\n'):
                               s,
                               nl * (ntrailing - count_trailing_newlines(s)))
 
+def strip_newlines(s, nleading=0, ntrailing=0):
+    """strip at most nleading and ntrailing newlines from s"""
+    for _ in range(nleading):
+        if s.lstrip(' \t')[0] == '\n':
+            s = s.lstrip(' \t')[1:]
+        elif s.lstrip(' \t')[0] == '\r\n':
+            s = s.lstrip(' \t')[2:]
+
+    for _ in range(ntrailing):
+        if s.rstrip(' \t')[-2:] == '\r\n':
+            s = s.rstrip(' \t')[:-2]
+        elif s.rstrip(' \t')[-1:] == '\n':
+            s = s.rstrip(' \t')[:-1]
+
+    return s
+
 
 class Parameter(object):
     """"""
@@ -237,9 +253,7 @@ class Section(object):
     @text.setter
     def text(self, val):
         """"""
-        # i guess i'm not sure why val needs to be rstripped... this
-        # precludes adding extra blank space at the end of a section
-        val = val.rstrip()
+        val = strip_newlines(val, ntrailing=1)
         if self.args_parser is not None:
             self.args = self.args_parser(self, val)
         else:
