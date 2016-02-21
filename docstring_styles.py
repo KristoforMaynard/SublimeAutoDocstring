@@ -206,8 +206,10 @@ class Section(object):
     def from_section(cls, sec):
         new_sec = cls(sec.heading)
         new_sec._text = sec._text  # pylint: disable=protected-access
-        # section_indent is not here on purpose
-        new_sec.indent = sec.indent
+        # when changing styles, the indentation should change to better fit
+        # the new style
+        # new_sec.section_indent = sec.section_indent
+        # new_sec.indent = sec.indent
         if hasattr(sec, "args"):
             new_sec.args = sec.args
         return new_sec
@@ -443,8 +445,16 @@ class Docstring(object):
                 make_new_sec = self.SECTION_STYLE.from_section
                 for sec_name, sec in docstr.sections.items():
                     docstr.sections[sec_name] = make_new_sec(sec)
+
+                # ok, this way of changing indentation is a thunder hack
                 if "Parameters" in docstr.sections:
                     self.sections["Parameters"].heading = self.PREFERRED_PARAMS_ALIAS
+                    for arg in self.sections["Parameters"].args.values():
+                        arg.meta['indent'] = self.sections["Parameters"].indent
+                if "Returns" in docstr.sections:
+                    for arg in self.sections["Returns"].args.values():
+                        arg.meta['indent'] = self.sections["Returns"].indent
+
         elif isinstance(docstr, string_types):
             if template_order:
                 self.sections = self.TEMPLATE.copy()
