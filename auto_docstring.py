@@ -18,6 +18,7 @@ import sublime
 import sublime_plugin
 
 from . import docstring_styles
+from .ast_formatting import format_node, format_type
 
 
 __class_re = r"(class)\s+([^\s\(\):]+)\s*(\(([\s\S]*?)\))?"
@@ -483,13 +484,14 @@ def get_desired_style(view, default="google", desire=None):
     else:
         return docstring_styles.STYLE_LOOKUP[style]
 
-def parse_function_params(s, default_type, default_description,
+def parse_function_params(s, ret_annotation, default_type, default_description,
                           optional_tag="optional"):
     """Parse function parameters into an OrderedDict of Parameters
 
     Args:
         s (str): everything in the parenthesis of a function
             declaration
+        ret_annotation (str): return annotation if any
         default_type (str): default type text
         default_description (str): default text
         optional_tag (str): tag included with type for kwargs when
@@ -507,19 +509,24 @@ def parse_function_params(s, default_type, default_description,
     # pretend the args go to a lambda func, then get an ast for the lambda
     s = s.replace("\r\n", "")
     s = s.replace("\n", "")
-    tree = ast.parse("def f({0}) {1}: return None".format(s, ""))
+    tree = ast.parse("def f({0}) {1}: return None".format(s, ret_annotation))
     fdef = tree.body[0]
 
     try:
         arg_ids = [arg.arg for arg in fdef.args.args]
     except AttributeError:
         arg_ids = [arg.id for arg in fdef.args.args]
+    annotations = [arg.annotation for arg in fdef.args.args]
+    if tree.body[0].returns:
+        ret_annotation = format_node(tree.body[0].returns, quote='')
+
     default_nodes = fdef.args.defaults
 
     if len(arg_ids) and (arg_ids[0] == "self" or arg_ids[0] == "cls"):
         if len(default_nodes) == len(arg_ids):
             default_nodes.pop(0)
         arg_ids.pop(0)
+        annotations.pop(0)
 
     # match up default values with keyword arguments from the ast
     kwargs_begin = len(arg_ids) - len(default_nodes)
@@ -529,8 +536,10 @@ def parse_function_params(s, default_type, default_description,
     for arg, default in zip(fdef.args.kwonlyargs, fdef.args.kw_defaults):
         try:
             arg_ids.append(arg.arg)
+            annotations.append('')
         except AttributeError:
             arg_ids.append(arg.id)
+            annotations.append('')
 
         if default is None:
             default = default_type
@@ -542,6 +551,7 @@ def parse_function_params(s, default_type, default_description,
         except AttributeError:
             name = fdef.args.vararg
         arg_ids.append("*{0}".format(name))
+        annotations.append('')
         defaults.append(None)
     if fdef.args.kwarg:
         try:
@@ -549,40 +559,29 @@ def parse_function_params(s, default_type, default_description,
         except AttributeError:
             name = fdef.args.kwarg
         arg_ids.append("**{0}".format(name))
+        annotations.append('')
         defaults.append(None)
 
     # now fill a params dict
     params = OrderedDict()
-    for i, name, default in zip(count(), arg_ids, defaults):
-        if default is None:
-            paramtype = None
-        elif default == default_type:
-            paramtype = default
+    # annotations = [None] * len(arg_ids)
+    for i, name, default, ano in zip(count(), arg_ids, defaults, annotations):
+        if ano:
+            paramtype = format_node(ano, quote='')
         else:
-            fld0 = getattr(default, default._fields[0])
-            if default._fields[0] in ['keys', 'elts']:
-                paramtype = default.__class__.__name__.lower()
-            elif fld0 in ["True", "False"]:
-                paramtype = "bool"
-            elif fld0 == "None":
-                paramtype = default_type
-            else:
-                paramtype = fld0.__class__.__name__
-
-            if paramtype == None.__class__.__name__:
-                paramtype = default_type
+            paramtype = format_type(default, default_type)
 
         if paramtype is not None:
             paramtype = r"${{NUMBER:{0}}}".format(paramtype)
 
         if kwargs_begin <= i and i < kwargs_end:
-            if optional_tag:
+            if optional_tag and paramtype:
                 paramtype += ", {0}".format(optional_tag)
         param = docstring_styles.Parameter([name], paramtype,
                                            default_description, tag=i)
         params[name] = param
 
-    return params
+    return params, ret_annotation
 
 def parse_function_exceptions(view, target, default_description):
     """Scan a class' code and look for exceptions
@@ -806,9 +805,10 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
 
         if typ == "def":
             if settings.get("inspect_function_parameters", True):
-                params = parse_function_params(args, default_type,
-                                               default_description,
-                                               optional_tag=optional_tag)
+                params, ret_ano = parse_function_params(args, ret_ano,
+                                                        default_type,
+                                                        default_description,
+                                                        optional_tag=optional_tag)
                 ds.update_parameters(params)
             if settings.get("inspect_exceptions", True):
                 excepts = parse_function_exceptions(view, target,
@@ -832,7 +832,11 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
             snippet_name = r"${{NUMBER:{0}}}".format(default_return_name)
         else:
             snippet_name = ""
-        snippet_type = r"${{NUMBER:{0}}}".format(default_type)
+
+        # if ret_ano:
+        #     ret_ano = ret_ano.strip()[len('->'):].strip().strip('"\'')
+        default_return_type = ret_ano if ret_ano else default_type
+        snippet_type = r"${{NUMBER:{0}}}".format(default_return_type)
         snippet_description = r"${{NUMBER:{0}}}".format(default_description)
         ds.add_dummy_returns(snippet_name, snippet_type, snippet_description)
 

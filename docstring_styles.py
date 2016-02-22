@@ -653,7 +653,6 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             params = sorted_params
 
         current_dict = self.get_section(sec_name).args
-        # print("current::", current)
 
         # go through params in the order of the function declaration
         # and cherry-pick from current_dict if there's already a description

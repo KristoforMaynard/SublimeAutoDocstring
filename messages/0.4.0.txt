@@ -1,5 +1,6 @@
 New Features:
   - Convert single docstrings or whole modules from one style to another with one command. See the `AutoDocstring: Convert...` and `AutoDocstring: Convert All...` commands.
+  - Pull parameter and return type information from Python 3 annotations. For now, return types will only be filled for new docstrings, and left unchanged on updates.
   - Settings can be in a JSON hash (dictionary) called "AutoDocstring" in a project-settings file. Project settings will override package settings.
 
 New Settings:

@@ -1,0 +1,2 @@
+ - update return type to match function annotation
+ - when going numpy -> google, when there are multiple parameters per entry, maybe they should be split, since that's not really in any of the docs that describe the google docstring style

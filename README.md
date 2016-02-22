@@ -10,6 +10,7 @@ Features
   - Inspects function definitions and inserts a stub for each parameter
   - Inspects class / module attributes and inserts a stub for each
   - Convert single docstrings or whole modules from one style to another with one command
+  - Pull parameter and return type information from Python 3 annotations
   - Discovers what exceptions are raised in a function and inserts a stub for each
   - Rearranges parameters to reflect their order in the function definition
   - Automatically detects style: [Google](https://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_google.html "Example of Google Style")  or [Numpy](https://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_numpy.html "Example of Numpy Style")
