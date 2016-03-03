@@ -88,20 +88,25 @@ def dedent_verbose(s, n=1):
 
     return indent, new
 
-def indent_docstr(s, indent, n=1):
+def indent_docstr(s, indent, n=1, trim=True):
     """Add common indentation to all lines except first
 
     Args:
         s (str): docstring starting at indentation level 0
         indent (str): text used for indentation, in practice
             this will be the level of the declaration + 1
+        n (int): don't indent first n lines
+        trim (bool): trim whitespace (' \t') out of blank lines
 
     Returns:
         s with common indentation applied
     """
     lines = s.splitlines(keepends=True)
     for i in range(n, len(lines)):
-        lines[i] = "{0}{1}".format(indent, lines[i])
+        if lines[i].strip() or not trim:
+            lines[i] = "{0}{1}".format(indent, lines[i])
+        else:
+            lines[i] = lines[i].strip(' \t')
     return "".join(lines)
 
 def count_leading_newlines(s):
