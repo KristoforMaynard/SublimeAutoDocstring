@@ -849,7 +849,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     else:
         _, body_indent_txt, _ = get_indentation(view, target, _module_flag)
 
-    new_docstr = new_ds.format(body_indent_txt)
+    new_docstr = new_ds.format(body_indent_txt) + body_indent_txt
 
     # replace ${NUMBER:.*} with ${[0-9]+:.*}
     i = 1
