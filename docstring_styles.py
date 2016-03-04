@@ -451,6 +451,7 @@ class Docstring(object):
     PREFERRED_PARAMS_ALIAS = "Args"
 
     sections = None
+    trailing_newlines = None
 
     def __init__(self, docstr, template_order=False):
         """
@@ -461,6 +462,7 @@ class Docstring(object):
         """
         if isinstance(docstr, Docstring):
             self.sections = docstr.sections
+            self.trailing_newlines = docstr.trailing_newlines
             if not isinstance(docstr, type(self)):
                 # fixme, this is kinda hacky
                 make_new_sec = self.SECTION_STYLE.from_section
@@ -546,8 +548,8 @@ class Docstring(object):
 
 class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
     """Styles understood by napoleon, aka. Google/Numpy"""
-    # TODO: is there any common funcionality to put here?
     STYLE_NAME = "napoleon"
+
     TEMPLATE = OrderedDict([("Summary", None),
                             ("Parameters", None),
                             ("Keyword Arguments", None),
@@ -579,6 +581,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         Args:
             s (type): Description
         """
+        self.trailing_newlines = count_trailing_newlines(s)
         s = dedent_docstr(s)
 
         sec_starts = [(m.start(), m.end(), m.string[m.start():m.end()])
@@ -614,6 +617,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             sec_text = self._format_section_text(section.heading, sec_body)
             s += with_bounding_newlines(sec_text, nleading=1, ntrailing=1)
 
+        if self.trailing_newlines:
+            s = with_bounding_newlines(s, ntrailing=self.trailing_newlines)
         s = indent_docstr(s, top_indent)
 
         return s
