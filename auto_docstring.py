@@ -882,6 +882,18 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
         view.run_command('insert_snippet', {'contents': new_docstr})
     else:
         view.replace(edit, old_ds_region, new_docstr)
+
+    # # now remove trailing spaces from blank lines; unfortunately,
+    # # editing the buffer right after inserting a snippet confuses
+    # # the whole tabbing between fields feature. The ironic thing
+    # # is that we wanted to kill the trailing spaces because
+    # # insert_snippet is what put them in there.
+    # lines = view.substr(new_ds_region).splitlines(keepends=True)
+    # for i, line in enumerate(lines):
+    #     if not line.strip():
+    #         lines[i] = line.strip(' \t')
+    # view.replace(edit, new_ds_region, "".join(lines))
+
     return 0
 
 def is_python_file(view):
