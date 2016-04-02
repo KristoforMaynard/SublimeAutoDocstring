@@ -159,7 +159,7 @@ class Parameter(object):
     meta = None
 
     def __init__(self, names, types, description, tag=None, descr_only=False,
-                 **kwargs):
+                 annotated=False, **kwargs):
         """
         Args:
             names (list): list of names
@@ -177,6 +177,7 @@ class Parameter(object):
         self.description = description
         self.tag = tag
         self.descr_only = descr_only
+        self.annotated = annotated
         self.meta = kwargs
 
 

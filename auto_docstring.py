@@ -18,7 +18,7 @@ import sublime
 import sublime_plugin
 
 from . import docstring_styles
-from .ast_formatting import format_node, format_type
+from . import dparse
 
 
 __class_re = r"(class)\s+([^\s\(\):]+)\s*(\(([\s\S]*?)\))?"
@@ -509,79 +509,37 @@ def parse_function_params(s, ret_annotation, default_type, default_description,
     # pretend the args go to a lambda func, then get an ast for the lambda
     s = s.replace("\r\n", "")
     s = s.replace("\n", "")
-    tree = ast.parse("def f({0}) {1}: return None".format(s, ret_annotation))
-    fdef = tree.body[0]
+    s = "def f({0}) {1}: pass".format(s, ret_annotation)
+    _, params, ret_annotation = dparse.parse_funcdef(s)
 
-    try:
-        arg_ids = [arg.arg for arg in fdef.args.args]
-    except AttributeError:
-        arg_ids = [arg.id for arg in fdef.args.args]
-    annotations = [arg.annotation for arg in fdef.args.args]
-    if tree.body[0].returns:
-        ret_annotation = format_node(tree.body[0].returns, quote='')
-
-    default_nodes = fdef.args.defaults
-
-    if len(arg_ids) and (arg_ids[0] == "self" or arg_ids[0] == "cls"):
-        if len(default_nodes) == len(arg_ids):
-            default_nodes.pop(0)
-        arg_ids.pop(0)
-        annotations.pop(0)
-
-    # match up default values with keyword arguments from the ast
-    kwargs_begin = len(arg_ids) - len(default_nodes)
-    kwargs_end = len(arg_ids)
-    defaults = [default_type] * kwargs_begin + default_nodes
-
-    for arg, default in zip(fdef.args.kwonlyargs, fdef.args.kw_defaults):
-        try:
-            arg_ids.append(arg.arg)
-            annotations.append('')
-        except AttributeError:
-            arg_ids.append(arg.id)
-            annotations.append('')
-
-        if default is None:
-            default = default_type
-        defaults.append(default)
-
-    if fdef.args.vararg:
-        try:
-            name = fdef.args.vararg.arg
-        except AttributeError:
-            name = fdef.args.vararg
-        arg_ids.append("*{0}".format(name))
-        annotations.append('')
-        defaults.append(None)
-    if fdef.args.kwarg:
-        try:
-            name = fdef.args.kwarg.arg
-        except AttributeError:
-            name = fdef.args.kwarg
-        arg_ids.append("**{0}".format(name))
-        annotations.append('')
-        defaults.append(None)
+    if params[0]['name'] in ['self', 'cls']:
+        params = params[1:]
 
     # now fill a params dict
-    params = OrderedDict()
+    params_dict = OrderedDict()
     # annotations = [None] * len(arg_ids)
-    for i, name, default, ano in zip(count(), arg_ids, defaults, annotations):
-        if ano:
-            paramtype = format_node(ano, quote='')
+    for i, param in enumerate(params):
+        name = param['name']
+
+        if param['annotation']:
+            paramtype = param['annotation']
+        elif param['default_type']:
+            paramtype = param['default_type']
         else:
-            paramtype = format_type(default, default_type)
+            paramtype = default_type
 
         if paramtype is not None:
             paramtype = r"${{NUMBER:{0}}}".format(paramtype)
 
-        if kwargs_begin <= i and i < kwargs_end:
-            if optional_tag and paramtype:
-                paramtype += ", {0}".format(optional_tag)
-        param = docstring_styles.Parameter([name], paramtype,
-                                           default_description, tag=i)
-        params[name] = param
+        if optional_tag and param['is_optional'] and paramtype:
+            paramtype += ", {0}".format(optional_tag)
 
-    return params, ret_annotation
+        p = docstring_styles.Parameter([name], paramtype,
+                                       default_description, tag=i,
+                                       annotated=bool(param['annotation']))
+        params_dict[name] = p
+
+    return params_dict, ret_annotation
 
 def parse_function_exceptions(view, target, default_description):
     """Scan a class' code and look for exceptions
