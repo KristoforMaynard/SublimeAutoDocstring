@@ -672,16 +672,27 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         new = OrderedDict()
         for name, param in params.items():
             if name in current_dict:
+                def_param = param
                 param = current_dict.pop(name)
+
                 if param.tag in tags_seen:
                     param = None
                 else:
                     tags_seen[param.tag] = True
+
+                # update the type if annotated
+                if def_param.annotated:
+                    param.types = def_param.types
+
             else:
                 # if param is in one of the 'other sections', then don't
                 # worry about it
                 for sec in other_sections:
                     if name in sec.args:
+                        # update the type if the annotated
+                        if param.annotated:
+                            sec.args[name].types = param.types
+                        # now ignore it
                         param = None
             if param:
                 new[name] = param
