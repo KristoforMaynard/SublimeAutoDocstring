@@ -766,9 +766,11 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
 
             if sec.args and ret_type:
                 p0 = next(iter(sec.args.values()))
-                if p0.types:
+                if p0.descr_only:
+                    p0.description = ret_type
+                elif p0.types:
                     p0.types = ret_type
-                else:
+                elif p0.names:
                     p0.names = [ret_type]
             elif ret_name or ret_type:
                 description = default_description
