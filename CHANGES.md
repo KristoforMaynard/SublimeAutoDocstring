@@ -2,6 +2,27 @@
 
 ## master branch
 
+## 0.5.0
+
+  - function parameters and return types now update to stay in sync with function annotations
+  - definition parsing is now ast-less
+
+## 0.4.0
+
+# New Features:
+  - Convert single docstrings or whole modules from one style to another with one command. See the `AutoDocstring: Convert...` and `AutoDocstring: Convert All...` commands.
+  - Pull parameter and return type information from Python 3 annotations. For now, return types will only be filled for new docstrings, and left unchanged on updates.
+  - Settings can be in a JSON hash (dictionary) called "AutoDocstring" in a project-settings file. Project settings will override package settings.
+
+# New Settings:
+  - `keep_previous` *(default=false)*: If true, then always append the existing docstring to the newly updated docstring. Could be useful for *processing legacy code*.
+
+# Bugfixes:
+  - This plugin now ships with the MagicPython grammar, so return annotations don't completely break this plugin since we rely on syntax highlighting, and the default ST3 grammar doesn't support return annotations. This plugin always switches to MagicPython, runs, then switches back, so the end user shoun't even know the switch happened.
+  - Lots of bugs with newlines and indentation
+  - "Parameters" sections are now more flexable and support blocks of arbitrary text
+  - "Returns" sections are now formatted like Parameters
+
 ## 0.3.2
 
   - Add `default_description`, `default_summary`, and `default_type` settings per [Issue #2](https://github.com/KristoforMaynard/SublimeAutoDocstring/issues/2)

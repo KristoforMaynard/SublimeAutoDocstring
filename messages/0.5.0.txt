@@ -1,0 +1,5 @@
+New Features:
+  - function parameters and return types now update to stay in sync with function annotations
+
+Bug Fixes:
+  - most Python3 annotations should correctly parse now
