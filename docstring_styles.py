@@ -510,6 +510,11 @@ class Docstring(object):
         """"""
         raise NotImplementedError("update_parameters is an abstract method")
 
+    def update_return_type(self, ret_name, ret_type,
+                           default_description="Description"):
+        """"""
+        raise NotImplementedError("update_return_type is an abstract method")
+
     def add_dummy_returns(self, name, typ, description):
         raise NotImplementedError("add_dummy_returns is an abstract method")
 
@@ -747,6 +752,35 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         other_sections = ['Other Parameters', 'Keyword Parameters']
         self._update_section(params, "Parameters", self.PREFERRED_PARAMS_ALIAS,
                              other_sections=other_sections)
+
+    def update_return_type(self, ret_name, ret_type,
+                           default_description="Description"):
+        """"""
+        sec_name = "Returns"
+
+        if not self.section_exists(sec_name) and (ret_name or ret_type):
+            self.finalize_section(sec_name, "")
+
+        if self.section_exists(sec_name):
+            sec = self.get_section(sec_name)
+
+            if sec.args and ret_type:
+                p0 = next(iter(sec.args.values()))
+                if p0.types:
+                    p0.types = ret_type
+                else:
+                    p0.names = [ret_type]
+            elif ret_name or ret_type:
+                description = default_description
+
+                sec.args = OrderedDict()
+                if ret_name:
+                    sec.args[ret_name] = Parameter([ret_name], ret_type, description)
+                else:
+                    sec.args[ret_type] = Parameter([ret_type], "", description)
+            else:
+                # and i ask myself, how did i get here?
+                pass
 
     def update_attributes(self, attribs, alpha_order=True):
         """

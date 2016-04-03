@@ -685,6 +685,11 @@ def parse_module_attributes(view, default_type, default_description):
 
     return attribs
 
+def snipify(_words, _use_snippet=False):
+    if _use_snippet and _words:
+        _words = r"${{NUMBER:{0}}}".format(_words)
+    return _words
+
 def autodoc(view, edit, region, all_defs, desired_style, file_type,
             default_qstyle=None, update_only=False):
     """actually do the business of auto-documenting
@@ -762,12 +767,26 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
             raise RuntimeError
 
         if typ == "def":
+            params, ret_ano = parse_function_params(args, ret_ano,
+                                                    default_type,
+                                                    default_description,
+                                                    optional_tag=optional_tag)
+
+            # prepare return name/type for new / updated returns section
+            if is_new and name != "__init__":
+                ret_name = default_return_name
+                ret_type = ret_ano if ret_ano else default_type
+            else:
+                ret_name = ''
+                ret_type = ret_ano if ret_ano else ''
+
+            ret_name = snipify(ret_name, use_snippet)
+            ret_type = snipify(ret_type, use_snippet)
+            s_default_description = snipify(default_description, use_snippet)
+
             if settings.get("inspect_function_parameters", True):
-                params, ret_ano = parse_function_params(args, ret_ano,
-                                                        default_type,
-                                                        default_description,
-                                                        optional_tag=optional_tag)
                 ds.update_parameters(params)
+                ds.update_return_type(ret_name, ret_type, s_default_description)
             if settings.get("inspect_exceptions", True):
                 excepts = parse_function_exceptions(view, target,
                                                     default_description)
@@ -784,19 +803,6 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
             snippet_summary += "\n"
         snippet_summary += r"${{NUMBER:{0}}}".format(default_summary)
         ds.finalize_section("Summary", snippet_summary)
-
-    if is_new and not _module_flag and typ == "def" and name != "__init__":
-        if default_return_name:
-            snippet_name = r"${{NUMBER:{0}}}".format(default_return_name)
-        else:
-            snippet_name = ""
-
-        # if ret_ano:
-        #     ret_ano = ret_ano.strip()[len('->'):].strip().strip('"\'')
-        default_return_type = ret_ano if ret_ano else default_type
-        snippet_type = r"${{NUMBER:{0}}}".format(default_return_type)
-        snippet_description = r"${{NUMBER:{0}}}".format(default_description)
-        ds.add_dummy_returns(snippet_name, snippet_type, snippet_description)
 
     # -> create new docstring from meta
     new_ds = desired_style(ds)
