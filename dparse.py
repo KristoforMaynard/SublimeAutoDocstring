@@ -7,12 +7,6 @@ import sys
 import token
 
 
-try:
-    string_types = (basestring, )
-except NameError:
-    string_types = (str, )
-
-
 class STTree(object):
     def __init__(self, s):
         st = parser.suite(s)
@@ -274,23 +268,6 @@ class STNode(object):
         return None
 
 
-def _sanitize_quotes(a):
-    """Remove surrounding quotes from an annotation that is a string
-
-    Args:
-        a (str): annotation
-
-    Returns:
-        str: cleaned annotation
-    """
-    try:
-        val = ast.literal_eval(a)
-        if isinstance(val, string_types):
-            a = val
-    except Exception:  # pylint: disable=broad-except
-        pass
-    return a
-
 def _extract_type(s, default=None):
     try:
         val = ast.literal_eval(s)
@@ -299,12 +276,24 @@ def _extract_type(s, default=None):
         ret = default
     return ret
 
-def parse_funcdef(s, clean_annotation_strings=True):
+def _trim_enclosing(s, quotes=True, sequence_markers=True):
+    s = s.strip()
+    if quotes and s[:3] == s[-3:] and s[:3] in ('"""', "'''"):
+        s = s[3:-3]
+    elif quotes and s[:1] == s[-1:] and s[:1] in ('"', "'"):
+        s = s[1:-1]
+    elif sequence_markers and s[:1] == '(' and s[-1:] == ')':
+        s = s[1:-1]
+    elif sequence_markers and s[:1] == '[' and s[-1:] == ']':
+        s = s[1:-1]
+    return s
+
+def parse_funcdef(s, trim_string_markers=True, trim_sequence_markers=True):
     """Tokenize and parse a function definition
 
     Args:
         s (str): function definition
-        clean_annotation_strings (bool): if an annotation is a string
+        trim_string_markers (bool): if an annotation is a string
             then remove the surrounding quotes
 
     Returns:
@@ -382,11 +371,14 @@ def parse_funcdef(s, clean_annotation_strings=True):
     else:
         ret_annotation = ""
 
-    if clean_annotation_strings:
+
+    _sanitize = lambda s: _trim_enclosing(s, quotes=trim_string_markers,
+                                          sequence_markers=trim_sequence_markers)
+    if trim_string_markers:
         for p in params:
             if p['annotation']:
-                p['annotation'] = _sanitize_quotes(p['annotation'])
-        ret_annotation = _sanitize_quotes(ret_annotation)
+                p['annotation'] = _sanitize(p['annotation'])
+        ret_annotation = _sanitize(ret_annotation)
 
     return funcname, params, ret_annotation
 
