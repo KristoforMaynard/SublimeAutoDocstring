@@ -274,6 +274,10 @@ def _extract_type(s, default=None):
         ret = val.__class__.__name__
     except Exception:  # pylint: disable=broad-except
         ret = default
+
+    if ret in ('NoneType', 'NotImplementedType'):
+        ret = ret[:-len('Type')]
+
     return ret
 
 def _trim_enclosing(s, quotes=True, sequence_markers=True):
