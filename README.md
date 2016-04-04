@@ -13,7 +13,6 @@ Features
   - Pull parameter and return type information from Python 3 annotations
   - Discovers what exceptions are raised in a function and inserts a stub for each
   - Rearranges parameters to reflect their order in the function definition
-  - Convert docstring style Numpy <-> Google
   - Automatically detects style: [Google](https://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_google.html "Example of Google Style")  or [Numpy](https://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_numpy.html "Example of Numpy Style")
 
 Usage
