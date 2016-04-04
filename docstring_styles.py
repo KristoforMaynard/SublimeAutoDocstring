@@ -282,6 +282,9 @@ class NapoleonSection(Section):
                "Warnings": "Warning"
               }
 
+    def is_return_section(self):
+        return self.heading and self.heading.lower() in ('return', 'returns')
+
     def param_parser_common(self, text):
         # NOTE: there will be some tricky business if there is a
         # section break done by "resuming unindented text"
@@ -291,11 +294,15 @@ class NapoleonSection(Section):
 
         _r = r"^\S[^\r\n]*(?:\n[^\S\n]+\S[^\r\n]*|\n)*"
         param_blocks = re.findall(_r, text, re.MULTILINE)
-        for block in param_blocks:
+        for i, block in enumerate(param_blocks):
             param = self.finalize_param(block, len(param_list))
             param_list.append(param)
-            for name in param.names:
-                param_dict[name] = param
+            if self.is_return_section():
+                param.names = [", ".join(param.names)]
+                param_dict[i] = param
+            else:
+                for name in param.names:
+                    param_dict[name] = param
         return param_dict
 
 
