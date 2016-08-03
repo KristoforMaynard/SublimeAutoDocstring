@@ -42,6 +42,7 @@ Settings
   - `default_return_name` *(default="name")*: Numpy style only. Default parameter name for return values. Set as an empty string to leave return values unnamed.
   - `default_summary` *(default="Summary")*: Filler text for summary
   - `default_type` *(default="TYPE")*: Filler text for type
+  - `default_qstyle` *(default=""")*: Type of quote to use for new docstrings.
   - `inspect_class_attributes` *(default=true)*: add / remove class attributes to stay in sync with the code
   - `inspect_exceptions` *(default=true)*: add / remove exceptions to stay in sync with the code.
   - `inspect_function_parameters` *(default=true)*: add / remove function parameters to stay in sync with the code.
