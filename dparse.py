@@ -258,9 +258,9 @@ class STNode(object):
 
         idx = self.index
         if direction > 0:
-            siblings = self.siblings[idx:idx + 1 + max_distance][1:]
+            siblings = self.siblings[idx:][1:][:max_distance]
         else:
-            siblings = self.siblings[idx: idx - 1 - max_distance:-1][1:]
+            siblings = self.siblings[:idx][::-1][:max_distance]
 
         for sib in siblings:
             if condition(sib, val):
@@ -316,10 +316,11 @@ def parse_funcdef(s, trim_string_markers=True, trim_sequence_markers=True):
     argslist = funcdef.find('typedargslist')
     if argslist:
         tfpdefs = argslist.find_all('tfpdef', max_depth=1)
+        lone_star = argslist.find(token.STAR, max_depth=1)
     else:
         tfpdefs = []
+        lone_star = None
 
-    lone_star = argslist.find(token.STAR, max_depth=1)
     lone_star_idx = lone_star.index if lone_star else sys.maxsize
     # nxt = lone_star.get_next_sibling() if lone_star else None
     # if nxt and nxt.toknum == token.COMMA:

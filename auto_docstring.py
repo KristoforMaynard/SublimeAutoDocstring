@@ -512,7 +512,7 @@ def parse_function_params(s, ret_annotation, default_type, default_description,
     s = "def f({0}) {1}: pass".format(s, ret_annotation)
     _, params, ret_annotation = dparse.parse_funcdef(s)
 
-    if params[0]['name'] in ['self', 'cls']:
+    if params and params[0]['name'] in ['self', 'cls']:
         params = params[1:]
 
     # now fill a params dict
