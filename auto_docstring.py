@@ -22,7 +22,7 @@ from . import dparse
 
 
 __class_re = r"(class)\s+([^\s\(\):]+)\s*(\(([\s\S]*?)\))?"
-__func_re = r"(def)\s+([^\s\(\):]+)\s*\(([\s\S]*?)\)\s*(->.*?)?"
+__func_re = r"(?:async\s*)?(def)\s+([^\s\(\):]+)\s*\(([\s\S]*?)\)\s*(->.*?)?"
 
 _all_decl_re = r"^[^\S\n]*({0}|{1})\s*:".format(__class_re, __func_re)
 _class_decl_re = r"^[^\S\n]*{0}\s*:".format(__class_re)
@@ -757,7 +757,8 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
             ds.update_attributes(attribs, alpha_order=sort_module_attributes)
     else:
         decl_str = view.substr(target).lstrip()
-        if decl_str.startswith('def'):
+
+        if decl_str.startswith(('def', 'async')):
             typ, name, args, ret_ano = re.match(_func_decl_re, decl_str).groups()
             if not ret_ano:
                 ret_ano = ""
