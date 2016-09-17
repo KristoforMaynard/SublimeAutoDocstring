@@ -24,6 +24,17 @@
                                 "command": "open_file",
                                 "args": {"file": "${packages}/User/AutoDocstring.sublime-settings"},
                                 "caption": "Settings – User"
+                            },
+                            { "caption": "-" },
+                            {
+                                "command": "open_file",
+                                "args": {"file": "${packages}/AutoDocstring/Default.sublime-keymap"},
+                                "caption": "Key Bindings – Default"
+                            },
+                            {
+                                "command": "open_file",
+                                "args": {"file": "${packages}/User/Default (OSX).sublime-keymap"},
+                                "caption": "Key Bindings – User"
                             }
                         ]
                     }
