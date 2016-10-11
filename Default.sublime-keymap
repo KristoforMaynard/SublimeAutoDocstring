@@ -1,4 +1,17 @@
 [
+  // Linux / Windows keyboard shortcuts
+  //
+  // { "keys": ["ctrl+alt+'"], "command": "auto_docstring" },
+  // { "keys": ["ctrl+alt+shift+'"], "command": "auto_docstring_all" }
+  //
+  // MacOS keyboard shortcuts
+  //
+  // { "keys": ["super+alt+'"], "command": "auto_docstring" },
+  // { "keys": ["super+alt+shift+'"], "command": "auto_docstring_all" }
+  //
+  // Shortcuts that try to auto-detect docstrings. In practice, these
+  // all have flaws.
+  //
   // This one triggers when hitting tab at the end of any extended string,
   // this is not quite right, is it
   // { "keys": ["tab"], "command": "auto_docstring_snip",
