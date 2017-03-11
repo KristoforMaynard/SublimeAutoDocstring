@@ -540,8 +540,46 @@ def parse_function_params(s, ret_annotation, default_type, default_description,
                                        default_description, tag=i,
                                        annotated=bool(param['annotation']))
         params_dict[name] = p
-
     return params_dict, ret_annotation
+
+def parse_return_keyword(view, target):
+    """Scan a function's code to look for how it returns
+
+    Args:
+        view (View): current view
+        target (Region): region of the declaration of interest
+
+    Returns:
+        str: one of 'return' or 'yield'
+    """
+    whole_func = get_whole_block(view, target)
+    func_region = sublime.Region(target.b, whole_func.b)
+
+    blacklist = get_all_blocks(view, func_region, classes_only=False)
+
+    # find all 'return' and 'yield' in function's code ignoring blacklist
+    # (nested funcs / classes)
+    ret_kw_regs = find_all_in_region(view, func_region, r"^\s*(return|yield)",
+                                     blacklist=blacklist)
+
+    for i in reversed(range(len(ret_kw_regs))):
+        text = view.substr(ret_kw_regs[i])
+        scope_name = view.scope_name(ret_kw_regs[i].a)
+
+        if "string" in scope_name or "comment" in scope_name:
+            ret_kw_regs.pop(i)
+
+    last_kw_stripped = view.substr(ret_kw_regs[-1]).lstrip()
+    if last_kw_stripped.startswith('return'):
+        ret = "return"
+    elif last_kw_stripped.startswith('yield'):
+        ret = "yield"
+    else:
+        print("AutoDocstring Warning: Unknown return keyword,",
+              last_kw_stripped)
+        ret = "return"
+
+    return ret
 
 def parse_function_exceptions(view, target, default_description):
     """Scan a class' code and look for exceptions
@@ -789,7 +827,10 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
 
             if settings.get("inspect_function_parameters", True):
                 ds.update_parameters(params)
-                ds.update_return_type(ret_name, ret_type, s_default_description)
+                ret_keyword = parse_return_keyword(view, target)
+                ds.update_return_type(ret_name, ret_type,
+                                      default_description=s_default_description,
+                                      keyword=ret_keyword)
             if settings.get("inspect_exceptions", True):
                 excepts = parse_function_exceptions(view, target,
                                                     default_description)

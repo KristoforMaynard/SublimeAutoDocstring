@@ -279,11 +279,13 @@ class NapoleonSection(Section):
                "Other Arguments": "Other Parameters",
                "Keyword Args": "Keyword Arguments",
                "Return": "Returns",
+               "Yield": "Yields",
                "Warnings": "Warning"
               }
 
     def is_return_section(self):
-        return self.heading and self.heading.lower() in ('return', 'returns')
+        return self.heading and self.heading.lower() in ('return', 'returns',
+                                                         'yield', 'yields')
 
     def param_parser_common(self, text):
         # NOTE: there will be some tricky business if there is a
@@ -376,6 +378,9 @@ class GoogleSection(NapoleonSection):
                                     param_formatter),
                "Returns": (param_parser,
                            param_formatter),
+
+               "Yields": (param_parser,
+                          param_formatter),
               }
 
 
@@ -447,6 +452,9 @@ class NumpySection(NapoleonSection):
                                     param_formatter),
                "Returns": (param_parser,
                            param_formatter),
+
+               "Yields": (param_parser,
+                          param_formatter),
               }
 
 
@@ -485,6 +493,9 @@ class Docstring(object):
                 if "Returns" in docstr.sections:
                     for arg in self.get_section("Returns").args.values():
                         arg.meta['indent'] = self.get_section("Returns").indent
+                if "Yields" in docstr.sections:
+                    for arg in self.get_section("Yields").args.values():
+                        arg.meta['indent'] = self.get_section("Yields").indent
 
         elif isinstance(docstr, string_types):
             if template_order:
@@ -518,7 +529,8 @@ class Docstring(object):
         raise NotImplementedError("update_parameters is an abstract method")
 
     def update_return_type(self, ret_name, ret_type,
-                           default_description="Description"):
+                           default_description="Description",
+                           keyword="return"):
         """"""
         raise NotImplementedError("update_return_type is an abstract method")
 
@@ -543,6 +555,19 @@ class Docstring(object):
                 return self.sections[alias]
         raise KeyError("Section '{0}' not found".format(section_name))
 
+    def pop_section(self, section_name):
+        if section_name in self.sections:
+            return self.sections.pop(section_name)
+        elif section_name in self.SECTION_STYLE.ALIASES:
+            alias = self.SECTION_STYLE.resolve_alias(section_name)
+            if alias in self.sections:
+                return self.sections.pop(alias)
+        raise KeyError("Section '{0}' not found".format(section_name))
+
+    def insert_section(self, section_name, section):
+        if section.heading != section_name:
+            section.heading = section_name
+        self.sections[section_name] = section
 
     def section_exists(self, section_name):
         """returns True iff section exists, and was finalized"""
@@ -761,9 +786,25 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                              other_sections=other_sections)
 
     def update_return_type(self, ret_name, ret_type,
-                           default_description="Description"):
+                           default_description="Description",
+                           keyword="return"):
         """"""
-        sec_name = "Returns"
+        if keyword == "yield":
+            sec_name = "Yields"
+        elif keyword == "return":
+            sec_name = "Returns"
+        else:
+            print("Autodocstring Warning: unknown return keyword,", keyword)
+            sec_name = "Returns"
+
+        if not self.section_exists(sec_name):
+            # see if a section exists from another keyword, ie, maybe
+            # this function used to return, but now it yields
+            for std_ret_name in ("Yields", "Returns"):
+                if self.section_exists(std_ret_name):
+                    sec = self.pop_section(std_ret_name)
+                    self.insert_section(sec_name, sec)
+                    break
 
         if not self.section_exists(sec_name) and (ret_name or ret_type):
             self.finalize_section(sec_name, "")
@@ -807,6 +848,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                              alpha_order=alpha_order)
 
     def add_dummy_returns(self, name, typ, description):
+        # No longer used??
         if not self.section_exists("Returns"):
             sec = self.SECTION_STYLE("Returns")
             if name:
