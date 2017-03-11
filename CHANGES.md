@@ -2,6 +2,11 @@
 
 ## master branch
 
+## 0.5.4
+
+  - support yield statement as alternative to return
+  - keep types from appearing for *varargs and **kwargs parameters
+
 ## 0.5.0
 
   - function parameters and return types now update to stay in sync with function annotations
