@@ -523,6 +523,8 @@ def parse_function_params(s, ret_annotation, default_type, default_description,
 
         if param['annotation']:
             paramtype = param['annotation']
+        elif param['is_vararg'] or param['is_kwarg']:
+            paramtype = None
         elif param['default_type']:
             paramtype = param['default_type']
         else:
