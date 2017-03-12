@@ -896,6 +896,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     # # the whole tabbing between fields feature. The ironic thing
     # # is that we wanted to kill the trailing spaces because
     # # insert_snippet is what put them in there.
+    # new_ds_region = get_docstring(view, _edit, target)[0]
     # lines = view.substr(new_ds_region).splitlines(keepends=True)
     # for i, line in enumerate(lines):
     #     if not line.strip():
