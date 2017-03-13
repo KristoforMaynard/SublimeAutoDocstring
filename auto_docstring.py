@@ -569,7 +569,11 @@ def parse_return_keyword(view, target):
         if "string" in scope_name or "comment" in scope_name:
             ret_kw_regs.pop(i)
 
-    last_kw_stripped = view.substr(ret_kw_regs[-1]).lstrip()
+    if ret_kw_regs:
+        last_kw_stripped = view.substr(ret_kw_regs[-1]).lstrip()
+    else:
+        last_kw_stripped = 'return'
+
     if last_kw_stripped.startswith('return'):
         ret = "return"
     elif last_kw_stripped.startswith('yield'):

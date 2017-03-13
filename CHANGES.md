@@ -2,6 +2,10 @@
 
 ## master branch
 
+## 0.5.5
+
+  - fix bug if no return / yield is present
+
 ## 0.5.4
 
   - support yield statement as alternative to return
