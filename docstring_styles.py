@@ -9,12 +9,16 @@ from textwrap import dedent
 from collections import OrderedDict
 from itertools import islice
 
+import logging
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.DEBUG)
 
 PY3k = sys.version_info[0] == 3
 if PY3k:
     string_types = str,
 else:
     string_types = basestring,  # pylint: disable=undefined-variable
+
 
 
 def make_docstring_obj(docstr, default="google", template_order=False):
@@ -30,7 +34,11 @@ def make_docstring_obj(docstr, default="google", template_order=False):
     Returns:
         subclass of Docstring
     """
+
     typ = detect_style(docstr)
+    
+    logger.info("[make_docstring_obj] from {} to {}".format(typ, default))
+
     if typ is None:
         if issubclass(default, Docstring):
             typ = default
@@ -181,6 +189,9 @@ class Parameter(object):
         self.meta = kwargs
 
 
+
+
+
 class Section(object):
     """"""
     ALIASES = {}
@@ -224,9 +235,12 @@ class Section(object):
         self.text = text
         self.meta = kwargs
 
+        logger.debug("[Section] create section '{}' ({}) with args : '{}'".format(self.heading, self.alias, self.args))
+
     @classmethod
     def from_section(cls, sec):
-        new_sec = cls(sec.heading)
+        new_sec = cls(sec.alias)    # use alias in order to get the same headings between sections
+
         new_sec._text = sec._text  # pylint: disable=protected-access
         # when changing styles, the indentation should change to better fit
         # the new style
@@ -269,6 +283,8 @@ class Section(object):
                 self.section_indent = section_indent
 
 
+
+
 class NapoleonSection(Section):
     """"""
     ALIASES = {"Args": "Parameters",
@@ -304,7 +320,8 @@ class NapoleonSection(Section):
                 param_dict[i] = param
             else:
                 for name in param.names:
-                    param_dict[name] = param
+                    param_dict[name] = param 
+
         return param_dict
 
 
@@ -333,6 +350,7 @@ class GoogleSection(NapoleonSection):
             typ = ""
             descr = s
             descr_only = True
+
         return Parameter(names, typ, descr, tag=tag, descr_only=descr_only, **meta)
 
     def param_parser(self, text):
@@ -346,7 +364,7 @@ class GoogleSection(NapoleonSection):
                 s += with_bounding_newlines(param.description, ntrailing=1)
             else:
                 if len(param.names) > 1:
-                    print("WARNING: Google docstrings don't allow > 1 "
+                    logger.warn("WARNING: Google docstrings don't allow > 1 "
                           "parameter per description")
                 p = "{0}".format(", ".join(param.names))
                 if param.types:
@@ -458,6 +476,211 @@ class NumpySection(NapoleonSection):
               }
 
 
+
+
+
+
+class SphinxSection(Section): 
+
+    def parser_common(self, text, main_field, type_field=None): 
+
+        param_dict = OrderedDict()
+        text = dedent_docstr(text, 0)
+
+        params = OrderedDict()
+
+        _r = re.compile(":(?P<field>\w+) (?P<name>\w+)( (?P<type>\w+))?:( )?(?P<description>.*)\r?\n?")
+        for m in _r.finditer(text): 
+
+            logger.debug("[SphinxSection][parser_common] groups : {}".format(m.groupdict()))
+
+            field = m.group("field")
+            name = m.group("name")
+            description = m.group("description")
+            the_type = m.group("type")
+
+            if name not in params: 
+                params[name] = {
+                    "name": name,  
+                    "description": "", 
+                    "type": None, 
+                    "tag": len(params)
+                }
+
+            param = params[name]
+
+            if type_field is not None and field == type_field: 
+                param["type"] = description 
+
+            elif field == main_field: 
+                param["description"] = description
+                if the_type: 
+                    param["type"] = the_type
+
+
+        logger.debug("[SphinxSection][parser_common] params : {}".format(params))
+
+        for (index, param) in enumerate(params.values()):
+            meta = {"indent": ""}
+
+            name = param["name"].strip()        # strip for removing last "\n"
+            the_type = param["type"].strip() if param["type"] else None
+            description = param["description"].strip()  
+            tag = param["tag"]
+            descr_only = the_type is None 
+
+            parameter = Parameter([name], the_type, description, tag, descr_only=descr_only, **meta)
+            
+            param_dict[name] = parameter
+            
+        return param_dict
+
+
+    def parser_common_returns(self, text, main_field, type_field=None): 
+
+        param_dict = OrderedDict()
+        text = dedent_docstr(text, 0)
+
+        params = OrderedDict()
+
+        return_param = {
+            "type": None, 
+            "description": None, 
+            "tag": 0
+        }
+
+
+        _r = re.compile(":(?P<field>\w+)( (?P<type>\w+))?:( )?(?P<description>.*)\r?\n?")
+        for m in _r.finditer(text): 
+
+            logger.debug("[SphinxSection][parser_common_returns] groups : {}".format(m.groupdict()))
+
+            field = m.group("field")
+            description = m.group("description")
+            the_type = m.group("type")
+
+
+            if type_field is not None and field == type_field: 
+                return_param["type"] = description 
+
+            elif field == main_field: 
+                return_param["description"] = description
+                if the_type: 
+                    return_param["type"] = the_type
+
+        #
+        # TODO: retrieve default_type and default_description from settings...
+        #
+        #
+        #
+        default_type = "${NUMBER:TYPE}"
+        default_description = "${NUMBER:Description}" 
+
+
+        meta = {"indent": ""}
+        tag = return_param["tag"]
+        the_type = return_param["type"].strip() if return_param["type"] else default_type
+        description = return_param["description"].strip() if return_param["description"] else default_description
+        descr_only = False 
+        
+
+        parameter = Parameter([the_type], None, description, tag, descr_only=descr_only, **meta)
+        param_dict[tag] = parameter
+
+        return param_dict
+
+
+    def formatter_common(self, main_field, type_field=None): 
+        
+        text = "" 
+
+        logger.debug("[SphinxSection][formatter_common] fields {}, optional {}".format(main_field, type_field))
+        logger.debug("[SphinxSection][formatter_common] params : {}".format([param.names for param in self.args.values()]))
+
+        for param in self.args.values(): 
+
+            names = ",".join(param.names) if len(param.names) > 1 else param.names[0]
+                        
+            line = ":{} {}: {}".format(main_field, names, param.description.strip())
+            text += with_bounding_newlines(line, ntrailing=1) 
+
+            if type_field: 
+                line_type = ":{} {}: {}".format(type_field, names, param.types.strip())
+                text += with_bounding_newlines(line_type, ntrailing=1) 
+
+        return text 
+
+
+    def formatter_common_returns(self, main_field, type_field=None): 
+        text = "" 
+
+        logger.debug("[SphinxSection][formatter_common_return] fields {}, optional {}".format(main_field, type_field))
+        logger.debug("[SphinxSection][formatter_common_return] params : '{}'".format([param.names for param in self.args.values()]))
+
+        for param in self.args.values(): 
+
+            names = ",".join(param.names) if len(param.names) > 1 else param.names[0]
+
+            line = ":{}: {}".format(main_field, param.description.strip())
+            text += with_bounding_newlines(line, ntrailing=1) 
+
+            if type_field: 
+                line_type = ":{}: {}".format(type_field, names)
+                text += with_bounding_newlines(line_type, ntrailing=1) 
+
+        return text 
+
+
+    def parser_param(self, text): 
+        return self.parser_common(text, "param", "type")
+
+    def formatter_param(self):
+        return self.formatter_common("param", "type") 
+
+
+    def parser_returns(self, text): 
+        return self.parser_common_returns(text, "returns", "rtype") 
+
+    def formatter_returns(self):
+        return self.formatter_common_returns("returns", "rtype")  
+
+
+    def parser_yields(self, text): 
+        return self.parser_common_returns(text, "yields", "ytype") 
+
+    def formatter_yields(self): 
+        return self.formatter_common_returns("yields", "ytype")  
+    
+    def parser_raises(self, text): 
+        return self.parser_common(text, "raises") 
+
+    def formatter_raises(self): 
+        return self.formatter_common("raises")  
+
+    ALIASES = {"Return": "Returns",
+               "Yield": "Yields",
+              }
+
+
+    PARSERS = {"Parameters": (parser_param, formatter_param),
+               "Returns": (parser_returns, formatter_returns),
+               "Yields": (parser_yields, formatter_yields),
+               "Raises": (parser_raises, formatter_raises),
+              }
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 class Docstring(object):
     """Handle parsing / modifying / writing docstrings"""
 
@@ -534,6 +757,21 @@ class Docstring(object):
         """"""
         raise NotImplementedError("update_return_type is an abstract method")
 
+    def update_attributes(self, attribs, alpha_order=True):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+        raise NotImplementedError("update_attributes is an abstract method")
+
+    def update_exceptions(self, attribs, alpha_order=True):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+        raise NotImplementedError("update_exceptions is an abstract method")
+
+
     def add_dummy_returns(self, name, typ, description):
         raise NotImplementedError("add_dummy_returns is an abstract method")
 
@@ -582,6 +820,10 @@ class Docstring(object):
         if sec is not None:
             return True
         return False
+
+
+
+
 
 
 class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
@@ -750,8 +992,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         if len(current_dict):
             del_sec_name = del_prefix + sec_name
             del_sec_alias = del_prefix + sec_alias
-            print("Warning, killing parameters named:",
-                  list(current_dict.keys()))
+            logger.warn("Warning, killing parameters named:", list(current_dict.keys()))
             # TODO: put a switch here for other bahavior?
             if not self.section_exists(self.SECTION_STYLE.resolve_alias(del_sec_name)):
                 self.finalize_section(del_sec_name, "")
@@ -760,8 +1001,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             deleted_tags = dict()
             for key, val in current_dict.items():
                 if key in deled_params.args:
-                    print("Stronger Warning: Killing old deleted param: "
-                          "'{0}'".format(key))
+                    logger.warn("Stronger Warning: Killing old deleted param: '{0}'".format(key))
 
                 val.names.remove(key)
                 if val.tag in deleted_tags:
@@ -785,6 +1025,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         self._update_section(params, "Parameters", self.PREFERRED_PARAMS_ALIAS,
                              other_sections=other_sections)
 
+
+
     def update_return_type(self, ret_name, ret_type,
                            default_description="Description",
                            keyword="return"):
@@ -794,7 +1036,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         elif keyword == "return":
             sec_name = "Returns"
         else:
-            print("Autodocstring Warning: unknown return keyword,", keyword)
+            logger.warn("Autodocstring Warning: unknown return keyword : '{}'".format(keyword))
+            # remove return section ? 
             sec_name = "Returns"
 
         if not self.section_exists(sec_name):
@@ -820,6 +1063,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                     p0.types = ret_type
                 elif p0.names:
                     p0.names = [ret_type]
+
             elif ret_name or ret_type:
                 description = default_description
 
@@ -828,8 +1072,10 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                     sec.args[ret_name] = Parameter([ret_name], ret_type, description)
                 else:
                     sec.args[ret_type] = Parameter([ret_type], "", description)
+
             else:
-                # and i ask myself, how did i get here?
+                # and i ask myself, how did i get here ?
+                # => good question...
                 pass
 
     def update_attributes(self, attribs, alpha_order=True):
@@ -844,8 +1090,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         Args:
             params (OrderedDict): params objects keyed by their names
         """
-        self._update_section(attribs, "Raises", del_prefix="No Longer ",
-                             alpha_order=alpha_order)
+        self._update_section(attribs, "Raises", del_prefix="No Longer ", alpha_order=alpha_order)
 
     def add_dummy_returns(self, name, typ, description):
         # No longer used??
@@ -902,9 +1147,320 @@ class NumpyDocstring(NapoleonDocstring):
         return "{0}\n{1}\n{2}".format(heading, "-" * len(heading), body)
 
 
+
+
+
+
+class SphinxDocstring(Docstring):
+    """"""
+    STYLE_NAME = "sphinx"
+    SECTION_STYLE = SphinxSection
+    SECTION_RE = r"^:(\w+)( \w+)*:.+\s*$\r?\n?"
+    PREFERRED_PARAMS_ALIAS = "Parameters"
+    
+
+    TEMPLATE = OrderedDict([("Summary", None),
+                            ("Parameters", None),
+                            ("Returns", None),
+                            ("Yields", None),
+                            ("Raises", None),
+                           ])
+
+    @classmethod
+    def detect_style(cls, docstr):
+        m = re.search(cls.SECTION_RE, docstr, re.MULTILINE)
+        return m is not None
+
+    def _parse(self, s):
+        """
+        Args:
+            s (type): Description
+        """
+        
+        self.trailing_newlines = count_trailing_newlines(s)
+        s = dedent_docstr(s)
+
+
+        sections_bodies = OrderedDict({})
+
+        alias = {
+            "param": "Parameters", 
+            "type": "Parameters", 
+
+            "return": "Returns",
+            "returns": "Returns", 
+            "rtype": "Returns", 
+
+            "yield": "Yields", 
+            "yields": "Yields", 
+            "ytype": "Yields",
+
+            "raise": "Raises", 
+            "raises": "Raises"
+        }
+
+        sec_starts = [(m.start(), m.end(), m.string[m.start():m.end()], m.group(1))
+                      for m in re.finditer(self.SECTION_RE, s, re.MULTILINE)]
+
+
+        sec_starts.insert(0, (0, 0, "", "Summary"))
+        sec_starts.append((len(s), len(s), "", ""))
+
+        # regroups the fields in the sections 
+        # - for example: ":param:" and ":type:" in Parameters section 
+        for current_sec, next_sec in zip(sec_starts[:-1], sec_starts[1:]):
+
+            sec_name = current_sec[3]
+            sec_body = current_sec[2] + s[current_sec[1]:next_sec[0]]
+            # current_sec[2] is the first line 
+            # s[current_sec[1]:next_sec[0]] is the rest (i.e. if multiline description)
+
+            try: 
+                sec_name = alias[sec_name]
+            except: 
+                pass 
+
+            sections_bodies[sec_name] = sections_bodies.get(sec_name, "") + sec_body 
+
+        for (sec_name, sec_body) in sections_bodies.items(): 
+            self.finalize_section(sec_name, sec_body)
+        
+        # debug only 
+        for name, section in self.sections.items(): 
+            logger.debug("[SphinxDocstring][_parse] sec name '{}', params '{}'".format(section.heading, section.args))
+
+
+    def format(self, top_indent):
+        """Format docstring into a string
+
+        Parameters:
+            top_indent (str): indentation added to all but the first lines
+
+        Returns:
+            str: properly formatted
+        """
+        s = ""
+
+
+        if self.section_exists("Summary"):
+            sec_text = self.get_section("Summary").text
+            if sec_text.strip():
+                s += with_bounding_newlines(sec_text, nleading=0, ntrailing=1)
+
+
+        for sec_name, section in self.sections.items():
+            if section is None:
+                continue
+
+            if sec_name == "Summary":
+                # safety  
+                continue
+
+            logger.debug("[SphinxDocstring][format] '{}' ({}) with args '{}'".format(section.heading, section.alias, section.args))
+            logger.debug("[SphinxDocstring][format] '{}' uses '{}' as formatter".format(section.heading, section.args_formatter))
+
+            if section.text is None: 
+                continue 
+
+            sec_body = indent_docstr(section.text, section.section_indent, n=0)
+            sec_text = self._format_section_text(section.heading, sec_body)
+            s += with_bounding_newlines(sec_text, nleading=1, ntrailing=1)
+
+        if self.trailing_newlines:
+            s = with_bounding_newlines(s, ntrailing=self.trailing_newlines)
+
+        s = indent_docstr(s, top_indent)
+
+        return s 
+
+
+    @staticmethod
+    def _format_section_text(heading, body):
+        return body
+
+    def update_parameters(self, params):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+
+        logger.debug("[SphinxDocstring][update_parameters] {}".format(params))
+        self._update_section(params, "Parameters")
+
+
+    def update_attributes(self, attribs, alpha_order=True):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+        logger.debug("[SphinxDocstring][update_attributes] {}".format(attribs))
+        self._update_section(attribs, "Attributes", alpha_order=alpha_order)
+
+    def update_exceptions(self, attribs, alpha_order=True):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+        logger.debug("[SphinxDocstring][update_exceptions] {}".format(attribs))
+        self._update_section(attribs, "Raises", alpha_order=alpha_order)
+
+
+    def update_return_type(self, ret_name, ret_type, default_description="Description", keyword="return"):
+        """"""
+        logger.debug("[SphinxDocstring][update_return_type] ret_name '{}', ret_type '{}', keyword '{}'".format(ret_name, ret_type, keyword))
+         
+
+        if keyword in ["return", "returns", "Return", "Returns"]: 
+            sec_name = "Returns"
+
+        elif keyword in ["yield", "yields", "Yield", "Yields"]: 
+            sec_name = "Yields"
+
+        else:
+            logger.debug("[SphinxDocstring][update_return_type] no return keword has been found for : '{}'".format(keyword))
+            logger.debug("[SphinxDocstring][update_return_type] delete previous return/yield sections")
+            for std_ret_name in ("Yields", "Returns"):
+                if self.section_exists(std_ret_name):
+                    sec = self.pop_section(std_ret_name)
+            return 
+
+
+        if not self.section_exists(sec_name):
+            # see if a section exists from another keyword, ie, maybe
+            # this function used to return, but now it yields
+            for std_ret_name in ("Yields", "Returns"):
+                if self.section_exists(std_ret_name):
+                    logger.debug("[SphinxDocstring][update_return_type] old return section exists : '{}'".format(std_ret_name))
+                    old_sec = self.pop_section(std_ret_name)
+
+                    self.finalize_section(sec_name, "")
+                    new_sec = self.get_section(sec_name)
+                    new_sec.args = old_sec.args 
+
+                    self.insert_section(sec_name, new_sec)
+                    break
+
+        if not self.section_exists(sec_name):   #  and (ret_name or ret_type)
+            logger.debug("[SphinxDocstring][update_return_type] section '{}' doesn't exists, create one".format(sec_name))
+            self.finalize_section(sec_name, "")
+        else: 
+            logger.debug("[SphinxDocstring][update_return_type] section '{}' already exists".format(sec_name))
+
+
+        if self.section_exists(sec_name):
+            sec = self.get_section(sec_name)
+
+            logger.debug("[SphinxDocstring][update_return_type] section args '{}'".format(sec.args))
+
+            if sec.args and ret_type:
+                p0 = next(iter(sec.args.values()))
+                if p0.descr_only:
+                    p0.description = ret_type
+                elif p0.types:
+                    p0.types = ret_type
+                elif p0.names:
+                    p0.names = [ret_type]
+            elif ret_name or ret_type:
+                description = default_description
+
+                sec.args = OrderedDict()
+                if ret_name:
+                    parameter = Parameter([ret_name], ret_type, description)
+                    sec.args[ret_name] =  parameter
+                else:
+                    sec.args[ret_type] = Parameter([ret_type], "", description)
+            else:
+                # and i ask myself, how did i get here?
+                pass 
+
+    def add_dummy_returns(self, name, typ, description):
+        raise NotImplementedError("add_dummy_returns is an abstract method")
+
+
+    def _update_section(self, params, sec_name, alpha_order=False):
+        """Update section to add / remove params
+
+        As a failsafe, params that are removed are placed in a
+        "Deleted ..." section
+
+        Args:
+            params (OrderedDict): dict of Parameter objects
+            sec_name (str): generic section name
+            sec_alias (str): section name that appears in teh docstring
+            del_prefix (str): prefix for section that holds params that
+                no longer exist.
+            alpha_order (bool): whether or not to alphabetically sort
+                the params
+        """
+
+        logger.debug("[SphinxDocstring][_update_section] {}".format(params))
+
+        if len(params) == 0:
+            if self.section_exists(sec_name): 
+                self.pop_section(sec_name)
+            return 
+
+        if not self.section_exists(sec_name):
+            logger.debug("[SphinxDocstring][_update_section] create section named {}".format(sec_name))
+            self.finalize_section(sec_name, "")
+
+        if alpha_order:
+            logger.debug("[SphinxDocstring][_update_section] sort parameters for section {}".format(sec_name))
+            sorted_params = OrderedDict()
+            for k in sorted(list(params.keys()), key=str.lower):
+                sorted_params[k] = params[k]
+            params = sorted_params
+
+        current_dict = self.get_section(sec_name).args
+
+        # go through params in the order of the function declaration
+        # and cherry-pick from current_dict if there's already a description
+        # for that parameter
+        tags_seen = dict()
+        new = OrderedDict()
+
+
+        for name, param in params.items():
+
+            if name in current_dict:
+
+                logger.debug("[SphinxDocstring][_update_section] name '{}' already in current dict".format(name))
+
+                def_param = param
+                param = current_dict.pop(name)
+
+                if param.tag in tags_seen:
+                    logger.debug("[SphinxDocstring][_update_section] already seen param '{}'".format(name))
+                    param = None
+                else:
+                    tags_seen[param.tag] = True
+
+                # update the type if annotated
+                if def_param.annotated:
+                    logger.debug("[SphinxDocstring][_update_section] update annotation : {}".format(def_param.types))
+                    param.types = def_param.types
+
+            else: 
+                logger.debug("[SphinxDocstring][_update_section] name '{}' not in current dict".format(name))
+
+            if param:
+                new[name] = param 
+
+
+        if len(new) == 0:
+            self.sections[sec_name] = None
+        else:
+            self.sections[sec_name].args = new
+
+
+
 STYLE_LOOKUP = OrderedDict([('numpy', NumpyDocstring),
-                            ('google', GoogleDocstring)])
+                            ('google', GoogleDocstring), 
+                            ('sphinx', SphinxDocstring)])
 
 ##
 ## EOF
 ##
+#
+#
+
