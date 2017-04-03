@@ -178,7 +178,7 @@ def get_docstring(view, edit, target, default_qstyle=None):
         whole_region: Region of entire docstring (including quotes)
         docstr_region: Region of docstring excluding quotes
         qstyle: the character marking the ends of the docstring,
-            will be one of [\""", ''', ", ']
+            will be one of [\"\"", ''', ", ']
         new: True if we inserted a new docstring
 
     Note:
@@ -542,6 +542,7 @@ def parse_function_params(s, ret_annotation, default_type, default_description,
         params_dict[name] = p
     return params_dict, ret_annotation
 
+
 def parse_return_keyword(view, target):
     """Scan a function's code to look for how it returns
 
@@ -572,16 +573,15 @@ def parse_return_keyword(view, target):
     if ret_kw_regs:
         last_kw_stripped = view.substr(ret_kw_regs[-1]).lstrip()
     else:
-        last_kw_stripped = 'return'
+        last_kw_stripped = ""
 
     if last_kw_stripped.startswith('return'):
         ret = "return"
     elif last_kw_stripped.startswith('yield'):
         ret = "yield"
     else:
-        print("AutoDocstring Warning: Unknown return keyword,",
-              last_kw_stripped)
-        ret = "return"
+        print("AutoDocstring Warning: Unknown return keyword '{}'".format(last_kw_stripped))
+        ret = ""
 
     return ret
 
@@ -832,6 +832,11 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
             if settings.get("inspect_function_parameters", True):
                 ds.update_parameters(params)
                 ret_keyword = parse_return_keyword(view, target)
+
+                print("[AutoDoc] return keyword : '{}'".format(ret_keyword))
+                print("[AutoDoc] return name '{}', type '{}'".format(ret_name, ret_type))
+
+
                 ds.update_return_type(ret_name, ret_type,
                                       default_description=s_default_description,
                                       keyword=ret_keyword)
@@ -908,6 +913,10 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     # view.replace(edit, new_ds_region, "".join(lines))
 
     return 0
+
+
+
+
 
 def is_python_file(view):
     """Check if view is a python file
