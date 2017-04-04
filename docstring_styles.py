@@ -9,6 +9,13 @@ from textwrap import dedent
 from collections import OrderedDict
 from itertools import islice
 
+# logger configuration 
+# - needs to restart SublimeText in order to see the changes in the console 
+# - possible parameters for format at : https://hg.python.org/cpython/file/5c4ca109af1c/Lib/logging/__init__.py#l399
+import logging 
+FORMAT = "%(name)s:%(levelname)s:%(lineno)s: %(message)s"
+logging.basicConfig(level=logging.INFO, format=FORMAT)
+logger = logging.getLogger("docstring_styles")
 
 PY3k = sys.version_info[0] == 3
 if PY3k:
@@ -17,20 +24,24 @@ else:
     string_types = basestring,  # pylint: disable=undefined-variable
 
 
+
 def make_docstring_obj(docstr, default="google", template_order=False):
     """Detect docstring style and create a Docstring object
-
+    
     Parameters:
         docstr (str): source docstring
         default (str, class): 'google', 'numpy' or subclass
             of Docstring
         template_order (bool, optional): iff True, reorder the
             sections to match the order they appear in the template
-
+    
     Returns:
         subclass of Docstring
     """
     typ = detect_style(docstr)
+    logger.info("[make_docstring_obj] from {} to {}".format(typ.__name__ if typ is not None else None, 
+                                                             default.__name__))
+
     if typ is None:
         if issubclass(default, Docstring):
             typ = default
@@ -224,6 +235,10 @@ class Section(object):
         self.text = text
         self.meta = kwargs
 
+        logger.debug("create section '{}' ({}) with args : '{}'".format(self.heading, 
+                                                                         self.alias, 
+                                                                         self.args))
+
     @classmethod
     def from_section(cls, sec):
         new_sec = cls(sec.heading)
@@ -336,18 +351,21 @@ class GoogleSection(NapoleonSection):
         return Parameter(names, typ, descr, tag=tag, descr_only=descr_only, **meta)
 
     def param_parser(self, text):
+        logger.info("[GoogleSection] section '{}' starts parsing".format(self.alias))
         return self.param_parser_common(text)
 
     def param_formatter(self):
         """"""
+        logger.info("[GoogleSection] section '{}' starts formatting".format(self.alias))
+
         s = ""
         for param in self.args.values():
             if param.descr_only:
                 s += with_bounding_newlines(param.description, ntrailing=1)
             else:
                 if len(param.names) > 1:
-                    print("WARNING: Google docstrings don't allow > 1 "
-                          "parameter per description")
+                    logger.warn("section '{}' : Google docstrings don't allow > 1 "
+                                 "parameter per description".format(self.alias))
                 p = "{0}".format(", ".join(param.names))
                 if param.types:
                     types = param.types.strip()
@@ -409,12 +427,15 @@ class NumpySection(NapoleonSection):
         return Parameter(names, typ, descr, tag=i, descr_only=descr_only, **meta)
 
     def param_parser(self, text):
+        logger.info("[NumpySection] section '{}' starts parsing".format(self.alias))
         return self.param_parser_common(text)
 
     def param_formatter(self):
         """"""
         # NOTE: there will be some tricky business if there is a
         # section break done by "resuming unindented text"
+        logger.info("[NumpySection] section '{}' starts formatting".format(self.alias))
+        
         s = ""
         # already_seen = {}
         for param in self.args.values():
@@ -534,6 +555,21 @@ class Docstring(object):
         """"""
         raise NotImplementedError("update_return_type is an abstract method")
 
+
+    def update_attributes(self, attribs, alpha_order=True):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+        raise NotImplementedError("update_attributes is an abstract method")
+
+    def update_exceptions(self, attribs, alpha_order=True):
+        """
+        Args:
+            params (OrderedDict): params objects keyed by their names
+        """
+        raise NotImplementedError("update_exceptions is an abstract method")
+
     def add_dummy_returns(self, name, typ, description):
         raise NotImplementedError("add_dummy_returns is an abstract method")
 
@@ -619,6 +655,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         Args:
             s (type): Description
         """
+        logger.info("[NapoleonDocstring] starts parsing text")
+
         self.trailing_newlines = count_trailing_newlines(s)
         s = dedent_docstr(s)
 
@@ -641,7 +679,10 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         """
         Args:
             top_indent (type): Description
+        
         """
+        logger.info("[NapoleonDocstring] starts formatting")
+
         s = ""
         if self.section_exists("Summary"):
             sec_text = self.get_section("Summary").text
@@ -750,8 +791,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         if len(current_dict):
             del_sec_name = del_prefix + sec_name
             del_sec_alias = del_prefix + sec_alias
-            print("Warning, killing parameters named:",
-                  list(current_dict.keys()))
+            logger.warn("killing parameters named:", list(current_dict.keys()))
             # TODO: put a switch here for other bahavior?
             if not self.section_exists(self.SECTION_STYLE.resolve_alias(del_sec_name)):
                 self.finalize_section(del_sec_name, "")
@@ -760,8 +800,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             deleted_tags = dict()
             for key, val in current_dict.items():
                 if key in deled_params.args:
-                    print("Stronger Warning: Killing old deleted param: "
-                          "'{0}'".format(key))
+                    logger.warn("Stronger Warning: Killing old deleted param: "
+                                 "'{0}'".format(key))
 
                 val.names.remove(key)
                 if val.tag in deleted_tags:
@@ -781,6 +821,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         Args:
             params (OrderedDict): params objects keyed by their names
         """
+        logger.info("[NapoleonDocstring] update parameters")
         other_sections = ['Other Parameters', 'Keyword Parameters']
         self._update_section(params, "Parameters", self.PREFERRED_PARAMS_ALIAS,
                              other_sections=other_sections)
@@ -789,6 +830,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                            default_description="Description",
                            keyword="return"):
         """"""
+        logger.info("[NapoleonDocstring] update return type") 
+
         if keyword == "yield":
             sec_name = "Yields"
         elif keyword == "return":
@@ -837,6 +880,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         Args:
             params (OrderedDict): params objects keyed by their names
         """
+        logger.info("[NapoleonDocstring] update attributes")
         self._update_section(attribs, "Attributes", alpha_order=alpha_order)
 
     def update_exceptions(self, attribs, alpha_order=True):
@@ -844,6 +888,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         Args:
             params (OrderedDict): params objects keyed by their names
         """
+        logger.info("[NapoleonDocstring] update exceptions")
         self._update_section(attribs, "Raises", del_prefix="No Longer ",
                              alpha_order=alpha_order)
 

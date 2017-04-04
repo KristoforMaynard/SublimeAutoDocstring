@@ -20,6 +20,14 @@ import sublime_plugin
 from . import docstring_styles
 from . import dparse
 
+# logger configuration 
+# - needs to restart SublimeText in order to see the changes in the console 
+# - possible parameters for format at : https://hg.python.org/cpython/file/5c4ca109af1c/Lib/logging/__init__.py#l399
+import logging 
+FORMAT = "%(name)s:%(levelname)s:%(lineno)s: %(message)s"
+logging.basicConfig(level=logging.INFO, format=FORMAT)
+logger = logging.getLogger("auto_docstring")
+
 
 __class_re = r"(class)\s+([^\s\(\):]+)\s*(\(([\s\S]*?)\))?"
 __func_re = r"(?:async\s*)?(def)\s+([^\s\(\):]+)\s*\(([\s\S]*?)\)\s*(->.*?)?"
@@ -82,7 +90,7 @@ def find_preceding_declaration(view, defs, region):
         region: Region of preceding declaration or None
     """
     preceding_defs = [d for d in defs if d.a <= region.a]
-    # print("PRECEDING_DEFS", preceding_defs)
+    logger.debug("PRECEDING_DEFS {}".format(preceding_defs))
     target = None
 
     # for bypassing closures... as in, find the function that the
@@ -100,12 +108,12 @@ def find_preceding_declaration(view, defs, region):
             # in case d is region(0, 0), aka module level
             is_closure = False
         elif block[0] in whitespace:
-            # print("block 0 is whitespace")
+            logger.debug("block 0 is whitespace")
             is_closure = True
         else:
             for line in block.splitlines()[1:]:
                 if len(line) > 0 and line[0] not in whitespace:
-                    # print("line[0] not whitespace:", line)
+                    logger.debug("line[0] not whitespace:", line)
                     is_closure = True
                     break
 
@@ -178,7 +186,7 @@ def get_docstring(view, edit, target, default_qstyle=None):
         whole_region: Region of entire docstring (including quotes)
         docstr_region: Region of docstring excluding quotes
         qstyle: the character marking the ends of the docstring,
-            will be one of [\""", ''', ", ']
+            will be one of [\"\"", ''', ", ']
         new: True if we inserted a new docstring
 
     Note:
@@ -239,7 +247,7 @@ def get_docstring(view, edit, target, default_qstyle=None):
         next_chars_reg.b = next_chars_reg.a + len(literal_prefix) + len(qstyle)
         docstr_end = view.find(r"(?<!\\){0}".format(qstyle), next_chars_reg.b)
         if docstr_end.a < next_chars_reg.a:
-            print("Autodocstr: oops, existing docstring on line",
+            logger.info("Autodocstr: oops, existing docstring on line",
                   target_end_lineno, "has no end?")
             return None, None, None, None
 
@@ -472,12 +480,12 @@ def get_desired_style(view, default="google", desire=None):
             if docstr_region is None:
                 typ = None
             else:
-                # print("??", docstr_region)
+                #logger.debug("?? {}".format(docstr_region))
                 docstr = view.substr(docstr_region)
                 typ = docstring_styles.detect_style(docstr)
 
             if typ is not None:
-                # print("Docstring style auto-detected:", typ)
+                logger.debug("Docstring style auto-detected : '{}'".format(typ))
                 return typ
 
         return docstring_styles.STYLE_LOOKUP[default]
@@ -579,8 +587,7 @@ def parse_return_keyword(view, target):
     elif last_kw_stripped.startswith('yield'):
         ret = "yield"
     else:
-        print("AutoDocstring Warning: Unknown return keyword,",
-              last_kw_stripped)
+        logger.warn("Unknown return keyword '{}'".format(last_kw_stripped))
         ret = "return"
 
     return ret
@@ -766,9 +773,10 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
         default_qstyle = settings.get("default_qstyle", '"""')
 
     target = find_preceding_declaration(view, all_defs, region)
-    # print("TARGET::", target)
+    logger.debug("TARGET:: {}".format(target))
+
     _module_flag = (target.a == target.b == 0)
-    # print("-> found target", target, _module_flag)
+    logger.debug("-> found target {} {}".format(target, _module_flag))
 
     _edit = None if update_only else edit
     old_ds_info = get_docstring(view, _edit, target,
@@ -954,7 +962,7 @@ class AutoDocstringCommand(sublime_plugin.TextCommand):
             desired_style = get_desired_style(view, desire=to_style)
 
             defs = find_all_declarations(view, True)
-            # print("DEFS::", defs)
+            logger.debug("DEFS:: {}".format(defs))
 
             for region in view.sel():
                 autodoc(view, edit, region, defs, desired_style, file_type,
