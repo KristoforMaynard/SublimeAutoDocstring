@@ -4,7 +4,7 @@ import textwrap
 # - possible parameters for format at :
 #   https://hg.python.org/cpython/file/5c4ca109af1c/Lib/logging/__init__.py#l399
 
-LOG_FORMAT = "%(name)s:%(levelname)s:%(lineno)s: %(message)s"
+LOG_FORMAT = "%(levelname)s %(filename)s:%(lineno)s: %(message)s"
 
 logger = logging.getLogger("auto_docstring")
 
