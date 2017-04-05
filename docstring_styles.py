@@ -19,17 +19,16 @@ else:
     string_types = basestring,  # pylint: disable=undefined-variable
 
 
-
 def make_docstring_obj(docstr, default="google", template_order=False):
     """Detect docstring style and create a Docstring object
-    
+
     Parameters:
         docstr (str): source docstring
         default (str, class): 'google', 'numpy' or subclass
             of Docstring
         template_order (bool, optional): iff True, reorder the
             sections to match the order they appear in the template
-    
+
     Returns:
         subclass of Docstring
     """
@@ -230,8 +229,8 @@ class Section(object):
         self.text = text
         self.meta = kwargs
 
-        logger.debug("create section '{}' ({}) with args : '{}'".format(self.heading, 
-                                                                         self.alias, 
+        logger.debug("create section '{}' ({}) with args : '{}'".format(self.heading,
+                                                                         self.alias,
                                                                          self.args))
 
     @classmethod
@@ -430,7 +429,7 @@ class NumpySection(NapoleonSection):
         # NOTE: there will be some tricky business if there is a
         # section break done by "resuming unindented text"
         logger.info("[NumpySection] section '{}' starts formatting".format(self.alias))
-        
+
         s = ""
         # already_seen = {}
         for param in self.args.values():
@@ -674,7 +673,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         """
         Args:
             top_indent (type): Description
-        
+
         """
         logger.info("[NapoleonDocstring] starts formatting")
 
@@ -825,7 +824,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                            default_description="Description",
                            keyword="return"):
         """"""
-        logger.info("[NapoleonDocstring] update return type") 
+        logger.info("[NapoleonDocstring] update return type")
 
         if keyword == "yield":
             sec_name = "Yields"
