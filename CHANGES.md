@@ -2,6 +2,8 @@
 
 ## master branch
 
+  - convert print(...) -> logging; Thanks @syffer
+
 ## 0.5.5
 
   - fix bug if no return / yield is present
