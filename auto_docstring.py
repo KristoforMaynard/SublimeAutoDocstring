@@ -17,16 +17,9 @@ import ast
 import sublime
 import sublime_plugin
 
+from .autodocstring_logging import logger
 from . import docstring_styles
 from . import dparse
-
-# logger configuration 
-# - needs to restart SublimeText in order to see the changes in the console 
-# - possible parameters for format at : https://hg.python.org/cpython/file/5c4ca109af1c/Lib/logging/__init__.py#l399
-import logging 
-FORMAT = "%(name)s:%(levelname)s:%(lineno)s: %(message)s"
-logging.basicConfig(level=logging.INFO, format=FORMAT)
-logger = logging.getLogger("auto_docstring")
 
 
 __class_re = r"(class)\s+([^\s\(\):]+)\s*(\(([\s\S]*?)\))?"
