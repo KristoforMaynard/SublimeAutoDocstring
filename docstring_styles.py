@@ -9,13 +9,8 @@ from textwrap import dedent
 from collections import OrderedDict
 from itertools import islice
 
-# logger configuration 
-# - needs to restart SublimeText in order to see the changes in the console 
-# - possible parameters for format at : https://hg.python.org/cpython/file/5c4ca109af1c/Lib/logging/__init__.py#l399
-import logging 
-FORMAT = "%(name)s:%(levelname)s:%(lineno)s: %(message)s"
-logging.basicConfig(level=logging.INFO, format=FORMAT)
-logger = logging.getLogger("docstring_styles")
+from .autodocstring_logging import logger
+
 
 PY3k = sys.version_info[0] == 3
 if PY3k:
