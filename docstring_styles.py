@@ -33,8 +33,8 @@ def make_docstring_obj(docstr, default="google", template_order=False):
         subclass of Docstring
     """
     typ = detect_style(docstr)
-    logger.info("[make_docstring_obj] from {} to {}".format(typ.__name__ if typ is not None else None, 
-                                                             default.__name__))
+    logger.info("[make_docstring_obj] from {} to {}"
+                "".format(typ.__name__ if typ is not None else None, default.__name__))
 
     if typ is None:
         if issubclass(default, Docstring):
