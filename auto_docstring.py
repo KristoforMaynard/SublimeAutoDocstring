@@ -209,7 +209,7 @@ def get_docstring(view, edit, target, default_qstyle=None):
 
     # hack for if there is a comment at the end of the declaration
     if view.rowcol(next_chars_reg.a)[0] == target_end_lineno and \
-       next_chars[0] == '#' and not module_level:
+       not module_level and next_chars[0] == '#':
         search_start = view.line(target.b).b
         next_chars_reg = view.find(r"\S{1,4}", search_start)
         next_chars = view.substr(next_chars_reg)
