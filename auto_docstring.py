@@ -96,7 +96,9 @@ def find_preceding_declaration(view, defs, region):
         block = dedent(block)
 
         if len(block) == 0:
-            raise NotImplementedError("Shouldn't be here?")
+            # happens on module level docstrings in modules that start
+            # with a single blank line
+            is_closure = False
         elif d.a == d.b == 0:
             # in case d is region(0, 0), aka module level
             is_closure = False
