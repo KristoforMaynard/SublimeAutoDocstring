@@ -722,6 +722,14 @@ class SphinxSection(Section):
     def formatter_param(self):
         return self.__formatter_common("param", "type") 
     
+    def parser_attributes(self, text): 
+        # was hard to find...
+        # see https://sphinxcontrib-napoleon.readthedocs.io/en/latest/ 
+        return self.__parser_common(text, "ivar", "vartype")
+
+    def formatter_attributes(self):
+        return self.__formatter_common("ivar", "vartype") 
+    
     def parser_raises(self, text): 
         return self.__parser_common(text, "raises", default_type=None) 
 
@@ -771,6 +779,7 @@ class SphinxSection(Section):
               }
 
     PARSERS = {"Parameters": (parser_param, formatter_param),
+               "Attributes": (parser_attributes, formatter_attributes),
                "Raises": (parser_raises, formatter_raises),
                "Example": (parser_example, formatter_example),
                
@@ -1289,10 +1298,13 @@ class SphinxDocstring(Docstring):
         s = dedent_docstr(s)
 
         sections_bodies = OrderedDict({})
-
+        
         alias = {
             "param": "Parameters", 
             "type": "Parameters", 
+
+            "ivar": "Attributes", 
+            "vartype": "Attributes", 
 
             "return": "Returns",
             "returns": "Returns", 
@@ -1537,7 +1549,7 @@ class SphinxDocstring(Docstring):
         new = OrderedDict()
 
         for name, param in params.items():
-
+            
             if name in current_dict:
 
                 logger.debug("name '{}' already in current dict".format(name))
