@@ -654,11 +654,18 @@ class SphinxSection(Section):
             names = ",".join(param.names) if len(param.names) > 1 else param.names[0]
             description = param.description.strip() if param.description else default_description
 
+            if (description == "Description"):
+                description = default_description
+
             line = ":{} {}: {}".format(main_tag, names, description)
             text += with_bounding_newlines(line, ntrailing=1) 
 
             if type_tag: 
                 types = param.types.strip() if param.types else default_type
+
+                if (types == "TYPE"):
+                    types = default_type
+
                 line_type = ":{} {}: {}".format(type_tag, names, types)
                 text += with_bounding_newlines(line_type, ntrailing=1) 
 
@@ -691,10 +698,17 @@ class SphinxSection(Section):
             description = param.description
             description = description.strip() if description else default_description
 
+            if (description == "Description"):
+                description = default_description
+
             line = ":{}: {}".format(main_tag, description)
             text += with_bounding_newlines(line, ntrailing=1) 
 
             if type_tag: 
+
+                if (names == "TYPE"):
+                    names = default_type
+
                 line_type = ":{}: {}".format(type_tag, names)
                 text += with_bounding_newlines(line_type, ntrailing=1) 
 
@@ -710,6 +724,9 @@ class SphinxSection(Section):
 
             description = param.description
             description = description.strip() if description else default_description
+
+            if (description == "Description"):
+                description = default_description
 
             line = ".. {}:: {}\n".format(tag, description)
             text = text + line 
@@ -1298,7 +1315,7 @@ class SphinxDocstring(Docstring):
         s = dedent_docstr(s)
 
         sections_bodies = OrderedDict({})
-        
+
         alias = {
             "param": "Parameters", 
             "type": "Parameters", 
