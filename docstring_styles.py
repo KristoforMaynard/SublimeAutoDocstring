@@ -834,7 +834,11 @@ class Docstring(object):
                 # fixme, this is kinda hacky
                 make_new_sec = self.SECTION_STYLE.from_section
                 for sec_name, sec in docstr.sections.items():
-                    docstr.sections[sec_name] = make_new_sec(sec)
+                    # when the section should not exists 
+                    # i.e. when a section was generated, but isn't needed anymore
+                    # e.g. when there isn't any exception raised 
+                    if (sec): 
+                        docstr.sections[sec_name] = make_new_sec(sec)
 
                 # ok, this way of changing indentation is a thunder hack
                 if "Parameters" in docstr.sections:
