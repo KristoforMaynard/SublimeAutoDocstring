@@ -612,9 +612,12 @@ def parse_function_exceptions(view, target, default_description):
     excepts = OrderedDict()
 
     whole_function = get_whole_block(view, target)
-
+    func_region = sublime.Region(target.b, whole_function.b)
+    blacklist = get_all_blocks(view, func_region, classes_only=False)
+    
     e_regions = find_all_in_region(view, whole_function,
-                                   r"^[^\S\n]*raise[^\S\n]+([^\s\(]+)")
+                                   r"^[^\S\n]*raise[^\S\n]+([^\s\(]+)", 
+                                   blacklist=blacklist)
     for e in e_regions:
         scope_name = view.scope_name(e.a)
         if "string" in scope_name or "comment" in scope_name:
