@@ -96,7 +96,8 @@ def find_preceding_declaration(view, defs, region):
         block = dedent(block)
 
         if len(block) == 0:
-            raise NotImplementedError("Shouldn't be here?")
+            # there is at least the begining of the file (i.e. region (0, 0))
+            target = preceding_defs[0]
         elif d.a == d.b == 0:
             # in case d is region(0, 0), aka module level
             is_closure = False
@@ -113,7 +114,7 @@ def find_preceding_declaration(view, defs, region):
         if not is_closure:
             target = d
             break
-
+    
     return target
 
 def get_indentation(view, target, module_decl=False):
