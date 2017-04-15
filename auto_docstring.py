@@ -310,6 +310,7 @@ def get_whole_block(view, target):
         sublime.Region: all lines in the class / function
     """
     first_line = view.substr(view.line(target.a))
+    first_line = first_line.replace("\t", "    ")
     leading_wspace = first_line[:len(first_line) - len(first_line.lstrip())]
 
     eoblock_row = None
@@ -319,6 +320,7 @@ def get_whole_block(view, target):
     for i in range(first_row + 1, eof_row + 1):
         line_tp0 = view.text_point(i, 0)
         line = view.substr(view.line(line_tp0)).rstrip()
+        line = line.replace("\t", "    ")
         tp0_scope = view.scope_name(line_tp0)
 
         if not line or "comment" in tp0_scope or "string" in tp0_scope:
