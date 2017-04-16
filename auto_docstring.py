@@ -325,7 +325,7 @@ def get_whole_block(view, target):
             continue
 
         if not (line.startswith(leading_wspace) and
-                line[len(leading_wspace)] in r" \t"):
+                line[len(leading_wspace)] in " \t"):
             eoblock_row = i - 1
             break
 
