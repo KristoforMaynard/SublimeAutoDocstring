@@ -267,7 +267,17 @@ def get_docstring(view, edit, target, default_qstyle=None):
         _, body_indent_txt, has_indented_body = get_indentation(view, target,
                                                                 module_level)
 
-        if same_line:
+        if module_level and target.b == 0:
+            # FIXME: whitespace is strange when inserting into a module that
+            #        starts with 1-2 blank lines
+            a, b = 0, 0
+            prefix, suffix = "", ""
+        elif module_level:
+            # FIXME: whitespace is strange when inserting into a module that
+            #        starts with 1-2 blank lines
+            a, b = target.b, target.b
+            prefix, suffix = "\n", ""
+        elif same_line:
             # used if the function body starts on the same line as declaration
             a = target.b
             b = next_chars_reg.a
