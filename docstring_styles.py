@@ -1190,8 +1190,16 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             # this function used to return, but now it yields
             for std_ret_name in ("Yields", "Returns"):
                 if self.section_exists(std_ret_name):
-                    sec = self.pop_section(std_ret_name)
-                    self.insert_section(sec_name, sec)
+                    # necessary to recreate completly the section
+                    # in order to use the right parser and formatter
+                    logger.debug("old return section exists : '{}'".format(std_ret_name))
+                    old_sec = self.pop_section(std_ret_name)
+
+                    self.finalize_section(sec_name, "")
+                    new_sec = self.get_section(sec_name)
+                    new_sec.args = old_sec.args 
+
+                    self.insert_section(sec_name, new_sec)
                     break
 
         if not self.section_exists(sec_name) and (ret_name or ret_type):
@@ -1493,6 +1501,8 @@ class SphinxDocstring(Docstring):
             # this function used to return, but now it yields
             for std_ret_name in ("Yields", "Returns"):
                 if self.section_exists(std_ret_name):
+                    # necessary to recreate completly the section
+                    # in order to use the right parser and formatter
                     logger.debug("old return section exists : '{}'".format(std_ret_name))
                     old_sec = self.pop_section(std_ret_name)
 
