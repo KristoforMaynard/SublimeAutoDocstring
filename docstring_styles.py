@@ -289,6 +289,8 @@ class NapoleonSection(Section):
                "Keyword Args": "Keyword Arguments",
                "Return": "Returns",
                "Yield": "Yields",
+               "No Longer Returns": "No Longer Returned", 
+               "No Longer Yields": "No Longer Yielded",
                "Warnings": "Warning"
               }
 
@@ -393,6 +395,12 @@ class GoogleSection(NapoleonSection):
 
                "Yields": (param_parser,
                           param_formatter),
+
+               "No Longer Returned": (param_parser,
+                                      param_formatter),
+                
+               "No Longer Yielded": (param_parser,
+                                     param_formatter),
               }
 
 
@@ -470,6 +478,13 @@ class NumpySection(NapoleonSection):
 
                "Yields": (param_parser,
                           param_formatter),
+                
+               "No Longer Returned": (param_parser,
+                                      param_formatter),
+                
+               "No Longer Yielded": (param_parser,
+                                     param_formatter),
+
               }
 
 
@@ -973,6 +988,8 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                             ("Keyword Arguments", None),
                             ("Returns", None),
                             ("Yields", None),
+                            ("No Longer Returned", None), 
+                            ("No Longer Yielded", None),
                             ("Other Parameters", None),
                             ("Deleted Parameters", None),
                             ("Attributes", None),
@@ -1173,7 +1190,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
 
     def update_return_type(self, ret_name, ret_type,
                            default_description="Description",
-                           keyword="return"):
+                           keyword="return", del_prefix="No Longer "):
         """"""
         logger.info("[NapoleonDocstring] update return type")
 
@@ -1183,7 +1200,20 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
             sec_name = "Returns"
         else:
             logger.warn("unknown return keyword: '{}'".format(keyword))
-            sec_name = "Returns"
+
+            for std_ret_name in ("Yields", "Returns"):
+                if self.section_exists(std_ret_name):
+                    del_sec_name = del_prefix + std_ret_name 
+                    del_sec_alias = self.SECTION_STYLE.resolve_alias(del_sec_name)
+                    if not self.section_exists(del_sec_alias):
+                        self.finalize_section(del_sec_alias, "")
+
+                    del_sec = self.get_section(del_sec_alias)
+
+                    sec = self.pop_section(std_ret_name)
+                    del_sec.args = sec.args 
+            
+            return 
 
         if not self.section_exists(sec_name):
             # see if a section exists from another keyword, ie, maybe
@@ -1202,9 +1232,6 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                     self.insert_section(sec_name, new_sec)
                     break
 
-        if not self.section_exists(sec_name) and (ret_name or ret_type):
-            self.finalize_section(sec_name, "")
-
         if self.section_exists(sec_name):
             sec = self.get_section(sec_name)
 
@@ -1218,7 +1245,6 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                     p0.names = [ret_type]
             elif ret_name or ret_type:
                 description = default_description
-
                 sec.args = OrderedDict()
                 if ret_name:
                     sec.args[ret_name] = Parameter([ret_name], ret_type, description)
@@ -1226,7 +1252,14 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                     sec.args[ret_type] = Parameter([ret_type], "", description)
             else:
                 # and i ask myself, how did i get here?
-                pass
+                pass 
+        else: 
+            self.finalize_section(sec_name, "")
+            sec = self.get_section(sec_name)
+            ret_type = ret_type if ret_type != "" else "${NUMBER:TYPE}"
+            sec.args = OrderedDict()
+            sec.args[ret_type] = Parameter([ret_type], "", default_description)
+        
 
     def update_attributes(self, attribs, alpha_order=True):
         """
@@ -1476,25 +1509,33 @@ class SphinxDocstring(Docstring):
         logger.debug("[SphinxDocstring][update_exceptions] {}".format(attribs))
         self._update_section(attribs, "Raises", alpha_order=alpha_order)
 
-    def update_return_type(self, ret_name, ret_type,
-                           default_description="Description", keyword="return"):
+    def update_return_type(self, ret_name, ret_type, default_description="Description", 
+                           keyword="return", del_prefix="No Longer "):
         """"""
         logger.debug("[SphinxDocstring][update_return_type] ret_name '{}', "
                      "ret_type '{}', keyword '{}'".format(ret_name, ret_type, keyword))
 
-        if keyword in ["return", "returns", "Return", "Returns"]:
-            sec_name = "Returns"
-
-        elif keyword in ["yield", "yields", "Yield", "Yields"]:
+        
+        if keyword == "yield":
             sec_name = "Yields"
-
+        elif keyword == "return":
+            sec_name = "Returns"
         else:
-            logger.debug("no return keword has been found for : '{}'".format(keyword))
-            logger.debug("delete previous return/yield sections")
+            logger.warn("unknown return keyword: '{}'".format(keyword))
+
             for std_ret_name in ("Yields", "Returns"):
                 if self.section_exists(std_ret_name):
+                    del_sec_name = del_prefix + std_ret_name 
+                    del_sec_alias = self.SECTION_STYLE.resolve_alias(del_sec_name)
+                    if not self.section_exists(del_sec_alias):
+                        self.finalize_section(del_sec_alias, "")
+
+                    del_sec = self.get_section(del_sec_alias)
+
                     sec = self.pop_section(std_ret_name)
-            return
+                    del_sec.args = sec.args 
+            
+            return 
 
         if not self.section_exists(sec_name):
             # see if a section exists from another keyword, ie, maybe
@@ -1508,21 +1549,13 @@ class SphinxDocstring(Docstring):
 
                     self.finalize_section(sec_name, "")
                     new_sec = self.get_section(sec_name)
-                    new_sec.args = old_sec.args
+                    new_sec.args = old_sec.args 
 
                     self.insert_section(sec_name, new_sec)
                     break
 
-        if not self.section_exists(sec_name):   #  and (ret_name or ret_type)
-            logger.debug("section '{}' doesn't exists, create one".format(sec_name))
-            self.finalize_section(sec_name, "")
-        else:
-            logger.debug("section '{}' already exists".format(sec_name))
-
         if self.section_exists(sec_name):
             sec = self.get_section(sec_name)
-
-            logger.debug("section {} args '{}'".format(sec.heading, sec.args))
 
             if sec.args and ret_type:
                 p0 = next(iter(sec.args.values()))
@@ -1534,16 +1567,20 @@ class SphinxDocstring(Docstring):
                     p0.names = [ret_type]
             elif ret_name or ret_type:
                 description = default_description
-
                 sec.args = OrderedDict()
                 if ret_name:
-                    parameter = Parameter([ret_name], ret_type, description)
-                    sec.args[ret_name] = parameter
+                    sec.args[ret_name] = Parameter([ret_name], ret_type, description)
                 else:
                     sec.args[ret_type] = Parameter([ret_type], "", description)
             else:
                 # and i ask myself, how did i get here?
-                pass
+                pass 
+        else: 
+            self.finalize_section(sec_name, "")
+            sec = self.get_section(sec_name)
+            ret_type = ret_type if ret_type != "" else "${NUMBER:TYPE}"
+            sec.args = OrderedDict()
+            sec.args[ret_type] = Parameter([ret_type], "", default_description)
 
     def add_dummy_returns(self, name, typ, description):
         raise NotImplementedError("add_dummy_returns is an abstract method")

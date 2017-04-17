@@ -587,7 +587,7 @@ def parse_return_keyword(view, target):
     if ret_kw_regs:
         last_kw_stripped = view.substr(ret_kw_regs[-1]).lstrip()
     else:
-        last_kw_stripped = 'return'
+        last_kw_stripped = ''
 
     if last_kw_stripped.startswith('return'):
         ret = "return"
@@ -595,7 +595,7 @@ def parse_return_keyword(view, target):
         ret = "yield"
     else:
         logger.warn("Unknown return keyword '{}'".format(last_kw_stripped))
-        ret = "return"
+        ret = ""
 
     return ret
 
