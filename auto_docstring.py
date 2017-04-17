@@ -272,11 +272,13 @@ def get_docstring(view, edit, target, default_qstyle=None):
             #        starts with 1-2 blank lines
             a, b = 0, 0
             prefix, suffix = "", ""
+            body_indent_txt = ""    # remove  whitespace added before module docstring
         elif module_level:
             # FIXME: whitespace is strange when inserting into a module that
             #        starts with 1-2 blank lines
             a, b = target.b, target.b
             prefix, suffix = "\n", ""
+            body_indent_txt = ""    # remove  whitespace added before module docstring
         elif same_line:
             # used if the function body starts on the same line as declaration
             a = target.b
@@ -309,7 +311,7 @@ def get_docstring(view, edit, target, default_qstyle=None):
                                        whole_region.b - len(qstyle))
         new = True
 
-    return whole_region, docstr_region, qstyle, new
+    return whole_region, docstr_region, qstyle, new, module_level
 
 def get_whole_block(view, target):
     """Find a region of all the lines that make up a class / function
@@ -789,7 +791,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     _edit = None if update_only else edit
     old_ds_info = get_docstring(view, _edit, target,
                                 default_qstyle=default_qstyle)
-    old_ds_whole_region, old_ds_region, quote_style, is_new = old_ds_info
+    old_ds_whole_region, old_ds_region, quote_style, is_new, is_module_level = old_ds_info
     if update_only and old_ds_whole_region is None:
         return -1
 
@@ -872,7 +874,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     new_ds = desired_style(ds)
 
     # -> replace old docstring with the new docstring
-    if use_snippet:
+    if use_snippet or is_module_level:
         body_indent_txt = ""
     else:
         _, body_indent_txt, _ = get_indentation(view, target, _module_flag)
