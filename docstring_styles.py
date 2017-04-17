@@ -1136,7 +1136,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         if len(current_dict):
             del_sec_name = del_prefix + sec_name
             del_sec_alias = del_prefix + sec_alias
-            logger.warn("killing parameters named:", list(current_dict.keys()))
+            logger.warn("killing parameters named: {}".format(current_dict.keys()))
             # TODO: put a switch here for other bahavior?
             if not self.section_exists(self.SECTION_STYLE.resolve_alias(del_sec_name)):
                 self.finalize_section(del_sec_name, "")
