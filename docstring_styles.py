@@ -654,7 +654,7 @@ class SphinxSection(Section):
             names = ",".join(param.names) if len(param.names) > 1 else param.names[0]
             description = param.description.strip() if param.description else default_description
 
-            if (description == "Description"):
+            if description == "Description":
                 description = default_description
 
             line = ":{} {}: {}".format(main_tag, names, description)
@@ -663,7 +663,7 @@ class SphinxSection(Section):
             if type_tag:
                 types = param.types.strip() if param.types else default_type
 
-                if (types == "TYPE"):
+                if types == "TYPE":
                     types = default_type
 
                 line_type = ":{} {}: {}".format(type_tag, names, types)
@@ -698,7 +698,7 @@ class SphinxSection(Section):
             description = param.description
             description = description.strip() if description else default_description
 
-            if (description == "Description"):
+            if description == "Description":
                 description = default_description
 
             line = ":{}: {}".format(main_tag, description)
@@ -706,7 +706,7 @@ class SphinxSection(Section):
 
             if type_tag:
 
-                if (names == "TYPE"):
+                if names == "TYPE":
                     names = default_type
 
                 line_type = ":{}: {}".format(type_tag, names)
@@ -725,7 +725,7 @@ class SphinxSection(Section):
             description = param.description
             description = description.strip() if description else default_description
 
-            if (description == "Description"):
+            if description == "Description":
                 description = default_description
 
             line = ".. {}:: {}\n".format(tag, description)
@@ -838,7 +838,7 @@ class Docstring(object):
                     # when the section should not exists
                     # i.e. when a section was generated, but isn't needed anymore
                     # e.g. when there isn't any exception raised
-                    if (sec):
+                    if sec:
                         docstr.sections[sec_name] = make_new_sec(sec)
 
                     else:
