@@ -1182,7 +1182,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         elif keyword == "return":
             sec_name = "Returns"
         else:
-            print("Autodocstring Warning: unknown return keyword,", keyword)
+            logger.warn("unknown return keyword: '{}'".format(keyword))
             sec_name = "Returns"
 
         if not self.section_exists(sec_name):
