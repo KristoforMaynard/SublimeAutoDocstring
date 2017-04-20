@@ -473,11 +473,11 @@ class NumpySection(NapoleonSection):
               }
 
 
-class SphinxSection(Section): 
+class SphinxSection(Section):
 
-    def __parser_common(self, text, main_tag, type_tag=None, 
-                        default_description="${NUMBER:Description}", 
-                        default_type="${NUMBER:TYPE}"): 
+    def __parser_common(self, text, main_tag, type_tag=None,
+                        default_description="${NUMBER:Description}",
+                        default_type="${NUMBER:TYPE}"):
 
         param_dict = OrderedDict()
         text = dedent_docstr(text, 0)
@@ -487,13 +487,13 @@ class SphinxSection(Section):
 
         regex = r":(?P<tag>\w+) (?P<name>\w+)( (?P<type>\w+))?:( )?(?P<description>.*)"
 
-        sec_starts = [{"start": m.start(), 
-                        "end": m.end(), 
+        sec_starts = [{"start": m.start(),
+                        "end": m.end(),
                         "m": m }
                         for m in re.finditer(regex, text) ]
 
-        sec_starts.append({"start": len(text), 
-                           "end": len(text), 
+        sec_starts.append({"start": len(text),
+                           "end": len(text),
                            "m": None})
 
         for current_tag, next_tag in zip(sec_starts[:-1], sec_starts[1:]):
@@ -507,21 +507,21 @@ class SphinxSection(Section):
             description = m.group("description") + text[current_tag["end"]:next_tag["start"]]
             the_type = m.group("type")
 
-            if name not in params: 
+            if name not in params:
                 params[name] = {
-                    "name": name,  
-                    "description": None, 
-                    "type": None, 
+                    "name": name,
+                    "description": None,
+                    "type": None,
                 }
 
             param = params[name]
 
-            if type_tag is not None and tag == type_tag: 
-                param["type"] = description 
+            if type_tag is not None and tag == type_tag:
+                param["type"] = description
 
-            elif tag == main_tag: 
+            elif tag == main_tag:
                 param["description"] = description
-                if the_type: 
+                if the_type:
                     param["type"] = the_type
 
         logger.debug("[SphinxSection][parser_common] params : {}".format(params))
@@ -530,31 +530,31 @@ class SphinxSection(Section):
             meta = {"indent": ""}
 
             #
-            # TODO: get default value from settings 
+            # TODO: get default value from settings
             #
 
             name = param["name"].strip()        # strip for removing last "\n"
             the_type = param["type"].strip() if param["type"] else default_type
             description = param["description"].strip() if param["description"] else default_description
-            descr_only = False 
+            descr_only = False
 
-            parameter = Parameter([name], the_type, description, tag_index, descr_only=descr_only, **meta)  
+            parameter = Parameter([name], the_type, description, tag_index, descr_only=descr_only, **meta)
             param_dict[name] = parameter
-            
+
         return param_dict
 
-    def __parser_common_returns(self, text, main_tag, type_tag=None, 
-                                default_description="${NUMBER:Description}", 
-                                default_type="${NUMBER:TYPE}"): 
+    def __parser_common_returns(self, text, main_tag, type_tag=None,
+                                default_description="${NUMBER:Description}",
+                                default_type="${NUMBER:TYPE}"):
         """Summary
-        
+
         :param text: Description
         :type text: TYPE
         :param main_field: Description
         :type main_field: TYPE
         :param type_field: Description
         :type type_field: None, optional
-        
+
         :returns: Description
         :rtype: TYPE
         """
@@ -564,19 +564,19 @@ class SphinxSection(Section):
         params = OrderedDict()
 
         return_param = {
-            "type": None, 
-            "description": None, 
+            "type": None,
+            "description": None,
         }
 
         regex = r":(?P<tag>\w+)( (?P<type>\w+))?:( )?(?P<description>.*)"
 
-        sec_starts = [ {"start": m.start(), 
-                        "end": m.end(), 
+        sec_starts = [ {"start": m.start(),
+                        "end": m.end(),
                         "m": m }
                         for m in re.finditer(regex, text) ]
 
-        sec_starts.append({"start": len(text), 
-                           "end": len(text), 
+        sec_starts.append({"start": len(text),
+                           "end": len(text),
                            "m": None})
 
         for current_tag, next_tag in zip(sec_starts[:-1], sec_starts[1:]):
@@ -589,17 +589,17 @@ class SphinxSection(Section):
             description = m.group("description") + text[current_tag["end"]:next_tag["start"]]
             the_type = m.group("type")
 
-            if type_tag is not None and tag == type_tag: 
-                return_param["type"] = description 
+            if type_tag is not None and tag == type_tag:
+                return_param["type"] = description
 
-            elif tag == main_tag: 
+            elif tag == main_tag:
                 return_param["description"] = description
-                if the_type: 
+                if the_type:
                     return_param["type"] = the_type
 
         #
         # TODO: retrieve default_type and default_description from settings...
-        # 
+        #
         meta = {"indent": ""}
         tag_index = 0
 
@@ -608,21 +608,21 @@ class SphinxSection(Section):
 
         description = return_param["description"]
         description = description.strip() if description else default_description
-                
+
         parameter = Parameter([the_type], None, description, tag_index, descr_only=False, **meta)
         param_dict[tag_index] = parameter
 
         return param_dict
 
-    def __parser_other(self, text, default_description="${NUMBER:Description}"): 
+    def __parser_other(self, text, default_description="${NUMBER:Description}"):
 
         param_dict = OrderedDict()
         text = dedent_docstr(text, 0)
 
-        description = None 
+        description = None
 
         _r = re.compile("\.\. (?P<tag>\w+)::( )?(?P<description>.*)\r?\n?")
-        for m in _r.finditer(text): 
+        for m in _r.finditer(text):
 
             logger.debug("[SphinxSection][parser_other] groups : {}".format(m.groupdict()))
 
@@ -632,24 +632,24 @@ class SphinxSection(Section):
             meta = {"indent": ""}
             tag_index = len(param_dict)
             description = description.strip() if description else default_description
-            
+
             parameter = Parameter([None], None, description, tag_index, descr_only=True, **meta)
             param_dict[tag_index] = parameter
 
-        return param_dict 
+        return param_dict
 
-    def __formatter_common(self, main_tag, type_tag=None, 
-                           default_description="${NUMBER:Description}", 
-                           default_type="${NUMBER:TYPE}"): 
-        
-        text = "" 
+    def __formatter_common(self, main_tag, type_tag=None,
+                           default_description="${NUMBER:Description}",
+                           default_type="${NUMBER:TYPE}"):
+
+        text = ""
 
         logger.debug("[SphinxSection][formatter_common] fields {}, optional {}"
                         .format(main_tag, type_tag))
         logger.debug("[SphinxSection][formatter_common] params : {}"
                         .format([param.names for param in self.args.values()]))
 
-        for param in self.args.values(): 
+        for param in self.args.values():
 
             names = ",".join(param.names) if len(param.names) > 1 else param.names[0]
             description = param.description.strip() if param.description else default_description
@@ -658,40 +658,40 @@ class SphinxSection(Section):
                 description = default_description
 
             line = ":{} {}: {}".format(main_tag, names, description)
-            text += with_bounding_newlines(line, ntrailing=1) 
+            text += with_bounding_newlines(line, ntrailing=1)
 
-            if type_tag: 
+            if type_tag:
                 types = param.types.strip() if param.types else default_type
 
                 if (types == "TYPE"):
                     types = default_type
 
                 line_type = ":{} {}: {}".format(type_tag, names, types)
-                text += with_bounding_newlines(line_type, ntrailing=1) 
+                text += with_bounding_newlines(line_type, ntrailing=1)
 
-        return text 
+        return text
 
-    def __formatter_common_returns(self, main_tag, type_tag=None, 
-                                   default_description="${NUMBER:Description}", 
-                                   default_type="${NUMBER:TYPE}"): 
+    def __formatter_common_returns(self, main_tag, type_tag=None,
+                                   default_description="${NUMBER:Description}",
+                                   default_type="${NUMBER:TYPE}"):
         """Summary
-        
+
         :param main_field: Description
         :type main_field: TYPE
         :param type_field: Description
         :type type_field: None, optional
-        
+
         :returns: Description
         :rtype: TYPE
         """
-        text = "" 
+        text = ""
 
         logger.debug("[SphinxSection][formatter_common_returns] fields {}, optional {}"
                         .format(main_tag, type_tag))
         logger.debug("[SphinxSection][formatter_common_returns] params : '{}'"
                         .format([param.names for param in self.args.values()]))
 
-        for param in self.args.values(): 
+        for param in self.args.values():
 
             names = ",".join(param.names) if len(param.names) > 1 else param.names[0]
 
@@ -702,25 +702,25 @@ class SphinxSection(Section):
                 description = default_description
 
             line = ":{}: {}".format(main_tag, description)
-            text += with_bounding_newlines(line, ntrailing=1) 
+            text += with_bounding_newlines(line, ntrailing=1)
 
-            if type_tag: 
+            if type_tag:
 
                 if (names == "TYPE"):
                     names = default_type
 
                 line_type = ":{}: {}".format(type_tag, names)
-                text += with_bounding_newlines(line_type, ntrailing=1) 
+                text += with_bounding_newlines(line_type, ntrailing=1)
 
-        return text 
+        return text
 
-    def __formatter_other(self, tag, default_description="${NUMBER:Description}"): 
+    def __formatter_other(self, tag, default_description="${NUMBER:Description}"):
         text = ""
 
         logger.debug("[SphinxSection][formatter_other] params : '{}'"
                         .format([param.names for param in self.args.values()]))
 
-        for (index, param) in self.args.items(): 
+        for (index, param) in self.args.items():
 
             description = param.description
             description = description.strip() if description else default_description
@@ -729,66 +729,66 @@ class SphinxSection(Section):
                 description = default_description
 
             line = ".. {}:: {}\n".format(tag, description)
-            text = text + line 
+            text = text + line
 
         return text
-    
-    def parser_param(self, text): 
+
+    def parser_param(self, text):
         return self.__parser_common(text, "param", "type")
 
     def formatter_param(self):
-        return self.__formatter_common("param", "type") 
-    
-    def parser_attributes(self, text): 
+        return self.__formatter_common("param", "type")
+
+    def parser_attributes(self, text):
         # was hard to find...
-        # see https://sphinxcontrib-napoleon.readthedocs.io/en/latest/ 
+        # see https://sphinxcontrib-napoleon.readthedocs.io/en/latest/
         return self.__parser_common(text, "ivar", "vartype")
 
     def formatter_attributes(self):
-        return self.__formatter_common("ivar", "vartype") 
-    
-    def parser_raises(self, text): 
-        return self.__parser_common(text, "raises", default_type=None) 
+        return self.__formatter_common("ivar", "vartype")
 
-    def formatter_raises(self): 
-        return self.__formatter_common("raises", default_type=None)  
+    def parser_raises(self, text):
+        return self.__parser_common(text, "raises", default_type=None)
 
-    def parser_example(self, text): 
+    def formatter_raises(self):
+        return self.__formatter_common("raises", default_type=None)
+
+    def parser_example(self, text):
         return self.__parser_common(text, "example")
 
     def formatter_example(self):
         return self.__formatter_common("example")
 
 
-    def parser_returns(self, text): 
-        return self.__parser_common_returns(text, "returns", "rtype") 
+    def parser_returns(self, text):
+        return self.__parser_common_returns(text, "returns", "rtype")
 
     def formatter_returns(self):
-        return self.__formatter_common_returns("returns", "rtype")  
+        return self.__formatter_common_returns("returns", "rtype")
 
-    def parser_yields(self, text): 
-        return self.__parser_common_returns(text, "yields", "ytype") 
+    def parser_yields(self, text):
+        return self.__parser_common_returns(text, "yields", "ytype")
 
-    def formatter_yields(self): 
-        return self.__formatter_common_returns("yields", "ytype")  
+    def formatter_yields(self):
+        return self.__formatter_common_returns("yields", "ytype")
 
 
-    def parser_warning(self, text): 
+    def parser_warning(self, text):
         return self.__parser_other(text, "warning")
 
-    def formatter_warning(self): 
+    def formatter_warning(self):
         return self.__formatter_other("warning")
 
-    def parser_seealso(self, text): 
+    def parser_seealso(self, text):
         return self.__parser_other(text, "seealso")
 
-    def formatter_seealso(self): 
+    def formatter_seealso(self):
         return self.__formatter_other("seealso")
 
-    def parser_note(self, text): 
+    def parser_note(self, text):
         return self.__parser_other(text, "note")
 
-    def formatter_note(self): 
+    def formatter_note(self):
         return self.__formatter_other("note")
 
     ALIASES = {"Return": "Returns",
@@ -799,13 +799,13 @@ class SphinxSection(Section):
                "Attributes": (parser_attributes, formatter_attributes),
                "Raises": (parser_raises, formatter_raises),
                "Example": (parser_example, formatter_example),
-               
+
                "Returns": (parser_returns, formatter_returns),
                "Yields": (parser_yields, formatter_yields),
 
-               "Warning": (parser_warning, formatter_warning), 
-               "See Also": (parser_seealso, formatter_seealso), 
-               "Note": (parser_note, formatter_note), 
+               "Warning": (parser_warning, formatter_warning),
+               "See Also": (parser_seealso, formatter_seealso),
+               "Note": (parser_note, formatter_note),
               }
 
 
@@ -835,16 +835,16 @@ class Docstring(object):
                 # fixme, this is kinda hacky
                 make_new_sec = self.SECTION_STYLE.from_section
                 for sec_name, sec in docstr.sections.items():
-                    # when the section should not exists 
+                    # when the section should not exists
                     # i.e. when a section was generated, but isn't needed anymore
-                    # e.g. when there isn't any exception raised 
-                    if (sec): 
-                        docstr.sections[sec_name] = make_new_sec(sec) 
+                    # e.g. when there isn't any exception raised
+                    if (sec):
+                        docstr.sections[sec_name] = make_new_sec(sec)
 
-                    else: 
-                        # deleting section that shouldn't be here 
+                    else:
+                        # deleting section that shouldn't be here
                         # including those generated with template_order=True
-                        del docstr.sections[sec_name]  
+                        del docstr.sections[sec_name]
 
                 # ok, this way of changing indentation is a thunder hack
                 if "Parameters" in docstr.sections:
@@ -1294,21 +1294,21 @@ class SphinxDocstring(Docstring):
     SECTION_STYLE = SphinxSection
     SECTION_RE = r"^(\.\. (?P<tag1>\w+)::|:(?P<tag2>\w+)( \w+)*:).+\s*$\r?\n?"
     PREFERRED_PARAMS_ALIAS = "Parameters"
-    
+
 
     TEMPLATE = OrderedDict([("Summary", None),
                             ("Parameters", None),
                             ("Returns", None),
                             ("Yields", None),
                             ("Raises", None),
-                            ("Warning", None), 
-                            ("See Also", None), 
-                            ("Note", None), 
+                            ("Warning", None),
+                            ("See Also", None),
+                            ("Note", None),
                             ("Example", None)
                            ])
 
     #def __init__(self, docstr, template_order=False):           # gives an error when converting...
-    #    Docstring.__init__(self, docstr, template_order=True)   # always order template 
+    #    Docstring.__init__(self, docstr, template_order=True)   # always order template
 
     @classmethod
     def detect_style(cls, docstr):
@@ -1320,73 +1320,73 @@ class SphinxDocstring(Docstring):
         Args:
             s (type): Description
         """
-        
+
         self.trailing_newlines = count_trailing_newlines(s)
         s = dedent_docstr(s)
 
         sections_bodies = OrderedDict({})
 
         alias = {
-            "param": "Parameters", 
-            "type": "Parameters", 
+            "param": "Parameters",
+            "type": "Parameters",
 
-            "ivar": "Attributes", 
-            "vartype": "Attributes", 
+            "ivar": "Attributes",
+            "vartype": "Attributes",
 
             "return": "Returns",
-            "returns": "Returns", 
-            "rtype": "Returns", 
+            "returns": "Returns",
+            "rtype": "Returns",
 
-            "yield": "Yields", 
-            "yields": "Yields", 
+            "yield": "Yields",
+            "yields": "Yields",
             "ytype": "Yields",
 
-            "raise": "Raises", 
-            "raises": "Raises", 
+            "raise": "Raises",
+            "raises": "Raises",
 
-            "warning": "Warning", 
-            "seealso": "See Also", 
+            "warning": "Warning",
+            "seealso": "See Also",
             "note": "Note",
-            "example": "Example", 
-            "examples": "Example" 
+            "example": "Example",
+            "examples": "Example"
         }
 
-        sec_starts = [ {"start": m.start(), 
-                        "end": m.end(), 
-                        "first_line": m.string[m.start():m.end()], 
-                        "tag_name": m.group("tag1") if m.group("tag1") else m.group("tag2")} 
+        sec_starts = [ {"start": m.start(),
+                        "end": m.end(),
+                        "first_line": m.string[m.start():m.end()],
+                        "tag_name": m.group("tag1") if m.group("tag1") else m.group("tag2")}
                         for m in re.finditer(self.SECTION_RE, s, re.MULTILINE)]
 
-        sec_starts.insert(0, {"start": 0, 
-                              "end": 0, 
-                              "first_line": "", 
+        sec_starts.insert(0, {"start": 0,
+                              "end": 0,
+                              "first_line": "",
                               "tag_name": "Summary"})
 
-        sec_starts.append({"start": len(s), 
-                           "end": len(s), 
+        sec_starts.append({"start": len(s),
+                           "end": len(s),
                            "first_line": "",
                            "tag_name": ""})
 
-        # regroups the fields in the sections 
-        # - for example: ":param:" and ":type:" in Parameters section 
+        # regroups the fields in the sections
+        # - for example: ":param:" and ":type:" in Parameters section
         for current_sec, next_sec in zip(sec_starts[:-1], sec_starts[1:]):
             sec_name = current_sec["tag_name"]     # sec_name = current_sec[3]
             sec_body = current_sec["first_line"] + s[current_sec["end"]:next_sec["start"]]
             # s[current_sec["end"]:next_sec["start"]] is the rest (i.e. if multiline description)
 
-            try: 
+            try:
                 sec_name = alias[sec_name]
-            except: 
-                pass 
+            except:
+                pass
 
-            sections_bodies[sec_name] = sections_bodies.get(sec_name, "") + sec_body 
+            sections_bodies[sec_name] = sections_bodies.get(sec_name, "") + sec_body
 
-        for (sec_name, sec_body) in sections_bodies.items(): 
+        for (sec_name, sec_body) in sections_bodies.items():
             self.finalize_section(sec_name, sec_body)
-        
-        # debug only 
-        for name, section in self.sections.items(): 
-            if section: 
+
+        # debug only
+        for name, section in self.sections.items():
+            if section:
                 logger.debug("[SphinxDocstring][_parse] sec name '{}', params '{}'"
                                 .format(section.heading, section.args))
 
@@ -1412,7 +1412,7 @@ class SphinxDocstring(Docstring):
                 continue
 
             if sec_name == "Summary":
-                # safety  
+                # safety
                 continue
 
             logger.debug("[SphinxDocstring][format] '{}' ({}) with args '{}'"
@@ -1421,8 +1421,8 @@ class SphinxDocstring(Docstring):
                             .format(section.heading, section.args_formatter))
 
             text = section.text
-            if text is None: 
-                continue 
+            if text is None:
+                continue
 
             sec_body = indent_docstr(text, section.section_indent, n=0)
             sec_text = self._format_section_text(section.heading, sec_body)
@@ -1433,7 +1433,7 @@ class SphinxDocstring(Docstring):
 
         s = indent_docstr(s, top_indent)
 
-        return s 
+        return s
 
     @staticmethod
     def _format_section_text(heading, body):
@@ -1468,11 +1468,11 @@ class SphinxDocstring(Docstring):
         """"""
         logger.debug("[SphinxDocstring][update_return_type] ret_name '{}', ret_type '{}', keyword '{}'"
                         .format(ret_name, ret_type, keyword))
-         
-        if keyword in ["return", "returns", "Return", "Returns"]: 
+
+        if keyword in ["return", "returns", "Return", "Returns"]:
             sec_name = "Returns"
 
-        elif keyword in ["yield", "yields", "Yield", "Yields"]: 
+        elif keyword in ["yield", "yields", "Yield", "Yields"]:
             sec_name = "Yields"
 
         else:
@@ -1481,7 +1481,7 @@ class SphinxDocstring(Docstring):
             for std_ret_name in ("Yields", "Returns"):
                 if self.section_exists(std_ret_name):
                     sec = self.pop_section(std_ret_name)
-            return 
+            return
 
         if not self.section_exists(sec_name):
             # see if a section exists from another keyword, ie, maybe
@@ -1493,7 +1493,7 @@ class SphinxDocstring(Docstring):
 
                     self.finalize_section(sec_name, "")
                     new_sec = self.get_section(sec_name)
-                    new_sec.args = old_sec.args 
+                    new_sec.args = old_sec.args
 
                     self.insert_section(sec_name, new_sec)
                     break
@@ -1501,7 +1501,7 @@ class SphinxDocstring(Docstring):
         if not self.section_exists(sec_name):   #  and (ret_name or ret_type)
             logger.debug("section '{}' doesn't exists, create one".format(sec_name))
             self.finalize_section(sec_name, "")
-        else: 
+        else:
             logger.debug("section '{}' already exists".format(sec_name))
 
         if self.section_exists(sec_name):
@@ -1528,7 +1528,7 @@ class SphinxDocstring(Docstring):
                     sec.args[ret_type] = Parameter([ret_type], "", description)
             else:
                 # and i ask myself, how did i get here?
-                pass 
+                pass
 
     def add_dummy_returns(self, name, typ, description):
         raise NotImplementedError("add_dummy_returns is an abstract method")
@@ -1552,9 +1552,9 @@ class SphinxDocstring(Docstring):
         logger.debug("[SphinxDocstring][_update_section] {}".format(params))
 
         if len(params) == 0:
-            if self.section_exists(sec_name): 
+            if self.section_exists(sec_name):
                 self.pop_section(sec_name)
-            return 
+            return
 
         if not self.section_exists(sec_name):
             logger.debug("create section named {}".format(sec_name))
@@ -1576,7 +1576,7 @@ class SphinxDocstring(Docstring):
         new = OrderedDict()
 
         for name, param in params.items():
-            
+
             if name in current_dict:
 
                 logger.debug("name '{}' already in current dict".format(name))
@@ -1595,11 +1595,11 @@ class SphinxDocstring(Docstring):
                     logger.debug("update annotation : {}".format(def_param.types))
                     param.types = def_param.types
 
-            else: 
+            else:
                 logger.debug("name '{}' not in current dict".format(name))
 
             if param:
-                new[name] = param 
+                new[name] = param
 
         if len(new) == 0:
             self.sections[sec_name] = None
@@ -1608,7 +1608,7 @@ class SphinxDocstring(Docstring):
 
 
 STYLE_LOOKUP = OrderedDict([('numpy', NumpyDocstring),
-                            ('google', GoogleDocstring), 
+                            ('google', GoogleDocstring),
                             ('sphinx', SphinxDocstring)])
 
 ##
