@@ -489,8 +489,8 @@ class SphinxSection(Section):
 
         sec_starts = [{"start": m.start(),
                         "end": m.end(),
-                        "m": m }
-                        for m in re.finditer(regex, text) ]
+                        "m": m}
+                        for m in re.finditer(regex, text)]
 
         sec_starts.append({"start": len(text),
                            "end": len(text),
@@ -535,10 +535,14 @@ class SphinxSection(Section):
 
             name = param["name"].strip()        # strip for removing last "\n"
             the_type = param["type"].strip() if param["type"] else default_type
-            description = param["description"].strip() if param["description"] else default_description
+            if param["description"]:
+                description = param["description"].strip()
+            else:
+                description = default_description
             descr_only = False
 
-            parameter = Parameter([name], the_type, description, tag_index, descr_only=descr_only, **meta)
+            parameter = Parameter([name], the_type, description, tag_index,
+                                  descr_only=descr_only, **meta)
             param_dict[name] = parameter
 
         return param_dict
@@ -570,10 +574,10 @@ class SphinxSection(Section):
 
         regex = r":(?P<tag>\w+)( (?P<type>\w+))?:( )?(?P<description>.*)"
 
-        sec_starts = [ {"start": m.start(),
-                        "end": m.end(),
-                        "m": m }
-                        for m in re.finditer(regex, text) ]
+        sec_starts = [{"start": m.start(),
+                       "end": m.end(),
+                       "m": m}
+                       for m in re.finditer(regex, text)]
 
         sec_starts.append({"start": len(text),
                            "end": len(text),
@@ -1351,11 +1355,11 @@ class SphinxDocstring(Docstring):
             "examples": "Example"
         }
 
-        sec_starts = [ {"start": m.start(),
-                        "end": m.end(),
-                        "first_line": m.string[m.start():m.end()],
-                        "tag_name": m.group("tag1") if m.group("tag1") else m.group("tag2")}
-                        for m in re.finditer(self.SECTION_RE, s, re.MULTILINE)]
+        sec_starts = [{"start": m.start(),
+                       "end": m.end(),
+                       "first_line": m.string[m.start():m.end()],
+                       "tag_name": m.group("tag1") if m.group("tag1") else m.group("tag2")}
+                       for m in re.finditer(self.SECTION_RE, s, re.MULTILINE)]
 
         sec_starts.insert(0, {"start": 0,
                               "end": 0,
@@ -1464,10 +1468,11 @@ class SphinxDocstring(Docstring):
         logger.debug("[SphinxDocstring][update_exceptions] {}".format(attribs))
         self._update_section(attribs, "Raises", alpha_order=alpha_order)
 
-    def update_return_type(self, ret_name, ret_type, default_description="Description", keyword="return"):
+    def update_return_type(self, ret_name, ret_type,
+                           default_description="Description", keyword="return"):
         """"""
-        logger.debug("[SphinxDocstring][update_return_type] ret_name '{}', ret_type '{}', keyword '{}'"
-                        .format(ret_name, ret_type, keyword))
+        logger.debug("[SphinxDocstring][update_return_type] ret_name '{}', "
+                     "ret_type '{}', keyword '{}'".format(ret_name, ret_type, keyword))
 
         if keyword in ["return", "returns", "Return", "Returns"]:
             sec_name = "Returns"
@@ -1523,7 +1528,7 @@ class SphinxDocstring(Docstring):
                 sec.args = OrderedDict()
                 if ret_name:
                     parameter = Parameter([ret_name], ret_type, description)
-                    sec.args[ret_name] =  parameter
+                    sec.args[ret_name] = parameter
                 else:
                     sec.args[ret_type] = Parameter([ret_type], "", description)
             else:
