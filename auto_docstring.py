@@ -189,7 +189,7 @@ def get_docstring(view, edit, target, default_qstyle=None):
         to add one if a sublime.Edit object is given.
     """
     target_end_lineno, _ = view.rowcol(target.b)
-    module_level = (target_end_lineno == 0)
+    module_level = (target.a == target.b == 0)
 
     # exclude the shebang line / coding line
     # by saying they're the declaration
@@ -267,17 +267,14 @@ def get_docstring(view, edit, target, default_qstyle=None):
         _, body_indent_txt, has_indented_body = get_indentation(view, target,
                                                                 module_level)
 
-        if module_level and target.b == 0:
+        if module_level:
             # FIXME: whitespace is strange when inserting into a module that
             #        starts with 1-2 blank lines
             a, b = 0, 0
-            prefix, suffix = "", ""
-            body_indent_txt = ""    # remove  whitespace added before module docstring
-        elif module_level:
-            # FIXME: whitespace is strange when inserting into a module that
-            #        starts with 1-2 blank lines
-            a, b = target.b, target.b
-            prefix, suffix = "\n", ""
+            if same_line:
+                prefix, suffix = "", "\n{0}".format(body_indent_txt)
+            else:
+                prefix, suffix = "", ""
             body_indent_txt = ""    # remove  whitespace added before module docstring
         elif same_line:
             # used if the function body starts on the same line as declaration
