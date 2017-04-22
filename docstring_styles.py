@@ -289,7 +289,7 @@ class NapoleonSection(Section):
                "Keyword Args": "Keyword Arguments",
                "Return": "Returns",
                "Yield": "Yields",
-               "No Longer Returns": "No Longer Returned", 
+               "No Longer Returns": "No Longer Returned",
                "No Longer Yields": "No Longer Yielded",
                "Warnings": "Warning"
               }
@@ -398,7 +398,7 @@ class GoogleSection(NapoleonSection):
 
                "No Longer Returned": (param_parser,
                                       param_formatter),
-                
+
                "No Longer Yielded": (param_parser,
                                      param_formatter),
               }
@@ -478,10 +478,10 @@ class NumpySection(NapoleonSection):
 
                "Yields": (param_parser,
                           param_formatter),
-                
+
                "No Longer Returned": (param_parser,
                                       param_formatter),
-                
+
                "No Longer Yielded": (param_parser,
                                      param_formatter),
 
@@ -988,7 +988,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                             ("Keyword Arguments", None),
                             ("Returns", None),
                             ("Yields", None),
-                            ("No Longer Returned", None), 
+                            ("No Longer Returned", None),
                             ("No Longer Yielded", None),
                             ("Other Parameters", None),
                             ("Deleted Parameters", None),
@@ -1203,7 +1203,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
 
             for std_ret_name in ("Yields", "Returns"):
                 if self.section_exists(std_ret_name):
-                    del_sec_name = del_prefix + std_ret_name 
+                    del_sec_name = del_prefix + std_ret_name
                     del_sec_alias = self.SECTION_STYLE.resolve_alias(del_sec_name)
                     if not self.section_exists(del_sec_alias):
                         self.finalize_section(del_sec_alias, "")
@@ -1211,9 +1211,9 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                     del_sec = self.get_section(del_sec_alias)
 
                     sec = self.pop_section(std_ret_name)
-                    del_sec.args = sec.args 
-            
-            return 
+                    del_sec.args = sec.args
+
+            return
 
         if not self.section_exists(sec_name):
             # see if a section exists from another keyword, ie, maybe
@@ -1227,7 +1227,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
 
                     self.finalize_section(sec_name, "")
                     new_sec = self.get_section(sec_name)
-                    new_sec.args = old_sec.args 
+                    new_sec.args = old_sec.args
 
                     self.insert_section(sec_name, new_sec)
                     break
@@ -1252,14 +1252,14 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
                     sec.args[ret_type] = Parameter([ret_type], "", description)
             else:
                 # and i ask myself, how did i get here?
-                pass 
-        else: 
+                pass
+        else:
             self.finalize_section(sec_name, "")
             sec = self.get_section(sec_name)
             ret_type = ret_type if ret_type != "" else "${NUMBER:TYPE}"
             sec.args = OrderedDict()
             sec.args[ret_type] = Parameter([ret_type], "", default_description)
-        
+
 
     def update_attributes(self, attribs, alpha_order=True):
         """
@@ -1509,13 +1509,13 @@ class SphinxDocstring(Docstring):
         logger.debug("[SphinxDocstring][update_exceptions] {}".format(attribs))
         self._update_section(attribs, "Raises", alpha_order=alpha_order)
 
-    def update_return_type(self, ret_name, ret_type, default_description="Description", 
+    def update_return_type(self, ret_name, ret_type, default_description="Description",
                            keyword="return", del_prefix="No Longer "):
         """"""
         logger.debug("[SphinxDocstring][update_return_type] ret_name '{}', "
                      "ret_type '{}', keyword '{}'".format(ret_name, ret_type, keyword))
 
-        
+
         if keyword == "yield":
             sec_name = "Yields"
         elif keyword == "return":
@@ -1525,7 +1525,7 @@ class SphinxDocstring(Docstring):
 
             for std_ret_name in ("Yields", "Returns"):
                 if self.section_exists(std_ret_name):
-                    del_sec_name = del_prefix + std_ret_name 
+                    del_sec_name = del_prefix + std_ret_name
                     del_sec_alias = self.SECTION_STYLE.resolve_alias(del_sec_name)
                     if not self.section_exists(del_sec_alias):
                         self.finalize_section(del_sec_alias, "")
@@ -1533,9 +1533,9 @@ class SphinxDocstring(Docstring):
                     del_sec = self.get_section(del_sec_alias)
 
                     sec = self.pop_section(std_ret_name)
-                    del_sec.args = sec.args 
-            
-            return 
+                    del_sec.args = sec.args
+
+            return
 
         if not self.section_exists(sec_name):
             # see if a section exists from another keyword, ie, maybe
@@ -1549,7 +1549,7 @@ class SphinxDocstring(Docstring):
 
                     self.finalize_section(sec_name, "")
                     new_sec = self.get_section(sec_name)
-                    new_sec.args = old_sec.args 
+                    new_sec.args = old_sec.args
 
                     self.insert_section(sec_name, new_sec)
                     break
@@ -1574,8 +1574,8 @@ class SphinxDocstring(Docstring):
                     sec.args[ret_type] = Parameter([ret_type], "", description)
             else:
                 # and i ask myself, how did i get here?
-                pass 
-        else: 
+                pass
+        else:
             self.finalize_section(sec_name, "")
             sec = self.get_section(sec_name)
             ret_type = ret_type if ret_type != "" else "${NUMBER:TYPE}"
