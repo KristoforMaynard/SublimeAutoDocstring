@@ -1199,7 +1199,7 @@ class NapoleonDocstring(Docstring):  # pylint: disable=abstract-method
         elif keyword == "return":
             sec_name = "Returns"
         else:
-            logger.warn("unknown return keyword: '{}'".format(keyword))
+            logger.debug("Unknown return keyword: '{}'".format(keyword))
 
             for std_ret_name in ("Yields", "Returns"):
                 if self.section_exists(std_ret_name):
@@ -1521,7 +1521,7 @@ class SphinxDocstring(Docstring):
         elif keyword == "return":
             sec_name = "Returns"
         else:
-            logger.warn("unknown return keyword: '{}'".format(keyword))
+            logger.debug("Unknown return keyword: '{}'".format(keyword))
 
             for std_ret_name in ("Yields", "Returns"):
                 if self.section_exists(std_ret_name):

@@ -591,7 +591,7 @@ def parse_return_keyword(view, target):
     elif last_kw_stripped.startswith('yield'):
         ret = "yield"
     else:
-        logger.warn("Unknown return keyword '{}'".format(last_kw_stripped))
+        logger.debug("Unknown return keyword '{}'".format(last_kw_stripped))
         ret = ""
 
     return ret
