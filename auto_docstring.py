@@ -270,11 +270,13 @@ def get_docstring(view, edit, target, default_qstyle=None):
         if module_level:
             # FIXME: whitespace is strange when inserting into a module that
             #        starts with 1-2 blank lines
-            a, b = 0, 0
+            a, b = target.b, target.b
+            prefix, suffix = "", ""
+            if view.rowcol(a)[1] != 0:
+                prefix = "\n"
             if same_line:
-                prefix, suffix = "", "\n{0}".format(body_indent_txt)
-            else:
-                prefix, suffix = "", ""
+                suffix = "\n{0}".format(body_indent_txt)
+
             body_indent_txt = ""    # remove  whitespace added before module docstring
         elif same_line:
             # used if the function body starts on the same line as declaration
