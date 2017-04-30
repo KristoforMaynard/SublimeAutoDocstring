@@ -244,7 +244,7 @@ def get_docstring(view, edit, target, default_qstyle=None):
         if docstr_end.a < next_chars_reg.a:
             logger.info("Autodocstr: oops, existing docstring on line",
                   target_end_lineno, "has no end?")
-            return None, None, None, None
+            return None, None, None, None, module_level
 
         whole_region = sublime.Region(next_chars_reg.a, docstr_end.b)
         docstr_region = sublime.Region(next_chars_reg.b, docstr_end.a)
@@ -259,7 +259,7 @@ def get_docstring(view, edit, target, default_qstyle=None):
                 view.replace(edit, after_quote_reg, "")
     elif edit is None:
         # no docstring exists, and don't make one
-        return None, None, None, False
+        return None, None, None, False, module_level
     else:
         # no docstring exists, but make / insert one
         qstyle = default_qstyle
