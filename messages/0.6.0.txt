@@ -1,0 +1,12 @@
+Most of the features and bug fixes in this release come from the
+excellent work of @syffer.
+
+New Features:
+  - Sphinx rst style
+
+Bug Fixes:
+  - Many bugs when converting between styles
+  - Whitespace around freshly inserted module-level docstrings
+  - exceptions raised in closures were erroneously added to the parent scope's docstring
+  - Bugs when a module is indented with '\t'
+  - AttributeError when template_order == true
