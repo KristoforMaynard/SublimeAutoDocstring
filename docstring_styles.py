@@ -736,19 +736,23 @@ class SphinxSection(Section):
     def __formatter_other(self, tag, default_description="${NUMBER:Description}"):
         text = ""
 
-        logger.debug("[SphinxSection][formatter_other] params : '{}'"
-                        .format([param.names for param in self.args.values()]))
+        if self.args:
+            logger.debug("[SphinxSection][formatter_other] params : '{}'"
+                            .format([param.names for param in self.args.values()]))
 
-        for (index, param) in self.args.items():
+            for (index, param) in self.args.items():
 
-            description = param.description
-            description = description.strip() if description else default_description
+                description = param.description
+                description = description.strip() if description else default_description
 
-            if description == "Description":
-                description = default_description
+                if description == "Description":
+                    description = default_description
 
-            line = ".. {}:: {}\n".format(tag, description)
-            text = text + line
+                line = ".. {}:: {}\n".format(tag, description)
+                text = text + line
+        else:
+            t = indent_docstr(self._text, "    ", n=0)
+            text = ".. {}::\n\n{}\n".format(tag, t)
 
         return text
 
