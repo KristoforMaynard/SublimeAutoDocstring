@@ -160,7 +160,8 @@ def get_indentation(view, target, module_decl=False):
 
     return def_indent_txt, body_indent_txt, has_indented_body
 
-def get_docstring(view, edit, target, default_qstyle=None):
+def get_docstring(view, edit, target, default_qstyle=None,
+                  extra_class_newlines=True):
     """Find a declaration's docstring
 
     This will return a docstring even if it has to write one
@@ -174,6 +175,10 @@ def get_docstring(view, edit, target, default_qstyle=None):
             a new docstring if one does not already exist. None
             means "don't edit the buffer"
         target: region of the declaration of interest
+        extra_class_newlines (bool): class docstrings get an extra
+            newline above and below, b/c PEP257. I find this
+            unnecessary, but it's in a PEP, so it should at least
+            be an option.
 
     Returns:
         (whole_region, docstr_region, qstyle, new)
@@ -299,6 +304,11 @@ def get_docstring(view, edit, target, default_qstyle=None):
             # hack if we're at the end of a file w/o a final \n
             if not view.substr(view.full_line(target.b)).endswith("\n"):
                 prefix = "\n"
+
+        if extra_class_newlines:
+            if view.substr(target).lstrip().startswith('class'):
+                prefix += '\n'
+                suffix *= 2
 
         stub = "{0}{1}{2}<FRESHLY_INSERTED>{2}{3}" \
                "".format(prefix, body_indent_txt, qstyle, suffix)
@@ -777,6 +787,7 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
     sort_module_attributes = settings.get("sort_module_attributes", True)
     start_with_newline = settings.get("start_with_newline", "")
     force_default_qstyle = settings.get("force_default_qstyle", True)
+    extra_class_newlines = settings.get("extra_class_newlines", True)
     keep_previous = settings.get("keep_previous", False)
     if not default_qstyle or force_default_qstyle:
         default_qstyle = settings.get("default_qstyle", '"""')
@@ -789,7 +800,8 @@ def autodoc(view, edit, region, all_defs, desired_style, file_type,
 
     _edit = None if update_only else edit
     old_ds_info = get_docstring(view, _edit, target,
-                                default_qstyle=default_qstyle)
+                                default_qstyle=default_qstyle,
+                                extra_class_newlines=extra_class_newlines)
     old_ds_whole_region, old_ds_region, quote_style, is_new, is_module_level = old_ds_info
     if update_only and old_ds_whole_region is None:
         return -1

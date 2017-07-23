@@ -17,5 +17,6 @@
   "use_snippet": true,
   "start_with_newline": "",
   "force_default_qstyle": true,
+  "extra_class_newlines": true,
   "default_qstyle": "\"\"\""
 }

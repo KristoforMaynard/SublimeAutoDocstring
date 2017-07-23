@@ -56,5 +56,6 @@ Settings
   - `use_snippet` *(default=true)*: If true, then insert a snippet so that you can
   tab through newly inserted fields (Summary / Types / Desciptions).
   - `start_with_newline` *(default="")*: Comma separated list of styles ('numpy', 'google') for which you want new docstrings to start with a newline. Can also be true or false to affect all styles.
+  - `extra_class_newlines` *default=true*: According to PEP257, docstrings for classes should be surrounded by extra blank lines. Set this to false for more compact, but less PEP257 compliant class docstrings.
   - `keep_previous` *(default=false)*: If true, then always append the existing docstring to the newly updated docstring. Could be useful for *processing legacy code*.
 
