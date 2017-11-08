@@ -106,7 +106,9 @@ def find_preceding_declaration(view, defs, region):
             logger.debug("block 0 is whitespace")
             is_closure = True
         else:
-            for line in block.splitlines()[1:]:
+            # ignore the whole declaration when determining closure-ness
+            block_start = len(re.search(_all_decl_re, block).group(0))
+            for line in block[block_start:].splitlines()[1:]:
                 if len(line) > 0 and line[0] not in whitespace:
                     logger.debug("line[0] not whitespace:", line)
                     is_closure = True
