@@ -28,14 +28,40 @@
                             { "caption": "-" },
                             {
                                 "command": "open_file",
-                                "args": {"file": "${packages}/AutoDocstring/Default.sublime-keymap"},
-                                "caption": "Key Bindings – Default"
+                                "args": {"file": "${packages}/AutoDocstring/Default (OSX).sublime-keymap",
+                                         "platform": "OSX"},
+                                "caption": "Key Bindings – Default (OSX)"
                             },
                             {
                                 "command": "open_file",
-                                "args": {"file": "${packages}/User/Default (OSX).sublime-keymap"},
-                                "caption": "Key Bindings – User"
-                            }
+                                "args": {"file": "${packages}/AutoDocstring/Default (Linux).sublime-keymap",
+                                         "platform": "Linux"},
+                                "caption": "Key Bindings – Default (Linux)"
+                            },
+                            {
+                                "command": "open_file",
+                                "args": {"file": "${packages}/AutoDocstring/Default (Windows).sublime-keymap",
+                                         "platform": "Windows"},
+                                "caption": "Key Bindings – Default (Windows)"
+                            },
+                            {
+                                "command": "open_file",
+                                "args": {"file": "${packages}/User/Default (OSX).sublime-keymap",
+                                         "platform": "OSX"},
+                                "caption": "Key Bindings – User (OSX)"
+                            },
+                            {
+                                "command": "open_file",
+                                "args": {"file": "${packages}/User/Default (Linux).sublime-keymap",
+                                         "platform": "Linux"},
+                                "caption": "Key Bindings – User (Linux)"
+                            },
+                            {
+                                "command": "open_file",
+                                "args": {"file": "${packages}/User/Default (Windows).sublime-keymap",
+                                         "platform": "Windows"},
+                                "caption": "Key Bindings – User (Windows)"
+                            },
                         ]
                     }
                 ]
