@@ -15,6 +15,13 @@ Features
   - Rearranges parameters to reflect their order in the function definition
   - Automatically detects style: [Google](https://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_google.html "Example of Google Style")  or [Numpy](https://sphinxcontrib-napoleon.readthedocs.org/en/latest/example_numpy.html "Example of Numpy Style")
 
+Installation
+------------
+
+This plugin is indexed on [Package Control](https://packagecontrol.io "Package Control"). Once Package Control is installed, this package can be installed from the command palette using ``Package Control: Install Package``.
+
+Alternatively, you can unzip this repository into your ``Packages`` directory. This directory is easily opened using the ``Sublime Text > Preferences > Browse Packages...`` menu on MacOS, or ``Preferences > Browse Packages...`` on Linux / Windows.
+
 Usage
 -----
 
