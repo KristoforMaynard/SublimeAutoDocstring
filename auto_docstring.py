@@ -585,7 +585,7 @@ def parse_return_keyword(view, target):
 
     # find all 'return' and 'yield' in function's code ignoring blacklist
     # (nested funcs / classes)
-    ret_kw_regs = find_all_in_region(view, func_region, r"^\s*(return|yield)",
+    ret_kw_regs = find_all_in_region(view, func_region, r"^[^\S\r\n]*(return|yield)",
                                      blacklist=blacklist)
 
     for i in reversed(range(len(ret_kw_regs))):
