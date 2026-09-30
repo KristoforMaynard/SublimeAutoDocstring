@@ -1,0 +1,2 @@
+Bug Fixes:
+  - Sublime Text > 4200 compatible with python 3.14

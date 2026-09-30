@@ -1,0 +1,7 @@
+[project]
+name = "sublimeautodocstring"
+version = "0.6.0"
+description = "Insert or update python docstrings; an improved docblockr for python"
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = []
