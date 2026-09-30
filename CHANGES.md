@@ -4,6 +4,9 @@
 
   - convert print(...) -> logging; Thanks @syffer
 
+## 0.6.0
+  - python 3.14 compatible with Sublime Text > 4200
+
 ## 0.5.5
 
   - fix bug if no return / yield is present
